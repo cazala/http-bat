@@ -1,27 +1,39 @@
-# BAT
-
+#%ATL 1.0
 baseUri: http://localhost:4567
-raml: server/fixtures/example.raml
+raml: example.raml
 
-stores:
+variables:
+  kvo-list:
+    - asd: 1
+    - asd: 1
+    - asd: 2
+    - obj:
+        test: string
+        bool: false
+  list:
+    - test
+    - test2
+  test: !include test.json
   oauth:
     accessToken: "EMPTY_VALUE"
   ENV:
     NODE_ENV: FAKE_ENV
     PORT: 0
+  number_201: 201
 
 options:
   selfSignedCert: true
   raml:
-    coverage: false
+    coverage: true
+
+schemas:
+  test_schema: !include valid.schema.json
 
 tests:
   "Test 404 error":
     GET /asjdnasjdnkasf:
       response:
         status: 404
-
-
 
   "Another":
     GET /hello?name=ERROR:
@@ -33,7 +45,28 @@ tests:
         body:
           is: "Hello agusA!"
 
+    GET /hello?a:
+      queryParameters:
+        name: agusA
+      response:
+        status: 200
+        body:
+          is: "Hello agusA!"
 
+    GET /hello:
+      queryParameters:
+        name: agusA
+      response:
+        status: 200
+        body:
+          is: "Hello agusA!"
+
+  "Test with global uriParameter":
+    GET /status/{number_201}:
+      response:
+        status: 201
+        body:
+         is: "Success"
 
   "Another tests 1":
     GET /status/200:
@@ -45,7 +78,7 @@ tests:
     POST /status/{status}:
       uriParameters:
         status: 200
-      request:
+      headers:
         content-type: application/json
       response:
         status: 200
@@ -80,9 +113,16 @@ tests:
             - authorization: test
         status: 200
 
+  "Skipped test":
+    async: true
+    skip: true
+    GET /:
+      response:
+        status: 223
 
 
   "Text Response":
+    async: true
     GET /responses/text:
       response:
         status: 200
@@ -92,6 +132,52 @@ tests:
 
 
   "JSON Response":
+    async: true
+    GET /responses/json:
+      response:
+        status: 200
+        body:
+          is: !!map { json: true }
+
+  "JSON Response with schema":
+    async: true
+    GET /responses/json:
+      response:
+        status: 200
+        body:
+          schema: test_schema
+
+
+  "Skipped suite":
+    skip: true
+    GET /:
+      response:
+        status: 223
+
+  "Skipped test 3":
+    GET /:
+      skip: true
+      response:
+        status: 223
+    GET /responses/json:
+      response:
+        status: 200
+        body:
+          is: !!map { json: true }
+
+
+  "Text Response after skipped":
+    async: true
+    GET /responses/text:
+      response:
+        status: 200
+        body:
+          is: 'text'
+
+
+
+  "JSON Response after skipped":
+    async: true
     GET /responses/json:
       response:
         status: 200
@@ -100,12 +186,13 @@ tests:
 
 
 
+
   "Regexp body":
     GET /stream:
       response:
         status: 200
-        body:
-          is: !!js/regexp /^Lorem/
+        # body:
+          # is: !!js/regexp /^Lorem/
 
 
 
@@ -156,7 +243,7 @@ tests:
     POST /post-body/attach-file:
       request:
         attach:
-          - file: 'server/fixtures/lorem.txt'
+          - file: 'lorem.txt'
       response:
         status: 200
         body:
@@ -168,9 +255,9 @@ tests:
     POST /post-body/attach-file?multiple:
       request:
         attach:
-          - file: 'server/fixtures/lorem.txt'
-          - file: 'server/fixtures/lorem.txt'
-          - "file-otherName": 'server/fixtures/lorem.txt'
+          - file: 'lorem.txt'
+          - file: 'lorem.txt'
+          - "file-otherName": 'lorem.txt'
       response:
         status: 200
         body:
@@ -190,7 +277,11 @@ tests:
       response:
         status: 200
         body:
-          is: *form-data-1
+          is:
+            name:
+              - agustin
+              - agustin
+            another: "123"
 
 
 
@@ -204,14 +295,16 @@ tests:
         status: 200
         body:
           print: true
-          is: *form-data-2
-
+          is:
+            - name: agustin
+            - name: agustin
+            - another: 123string
 
 
     POST /post-body/form-n-files:
       request:
         attach:
-          - file: 'server/fixtures/lorem.txt'
+          - file: 'lorem.txt'
         form:
           - name: 'agustin'
           - name: 'agustin'
@@ -226,9 +319,8 @@ tests:
             - name: 'agustin'
             - another: 123string
 
-
-
   "Access control by token":
+    async: true
     GET /secured_by_token#should-be-unauthorized:
       queryParameters:
         accessToken: !!variable oauth.accessToken
@@ -291,10 +383,8 @@ tests:
         body:
           take:
             - "[1]": !!variable second_user
-          matches:
-            - "[0].id": !!js/regexp ([0-9]+)
-
-
+          #matches:
+          #  - "[0].id": !!js/regexp ([0-9]+)
 
     GET /users/{id}:
       description: Get an user by ID
@@ -306,8 +396,6 @@ tests:
           matches:
             - id: !!variable second_user.id
             - name: !!variable second_user.name
-
-
 
     GET /users#FirstUserThisTime:
       response:
@@ -327,6 +415,38 @@ tests:
             - name: !!variable first_user.name
 
   "Testing RAML urls":
+    GET /:
+      response:
+        status: 200
+
+    GET /#with-query-parameter:
+      queryParameters:
+        count: 10
+      response:
+        status: 200
+
+    GET /a/1/b/2:
+      response:
+        status: 404
+
+    GET /a/1/b/2?:
+      response:
+        status: 404
+
+    GET /a/1/b/2#:
+      response:
+        status: 404
+
+    GET /defaults/headers:
+      response:
+        status: 200
+
+    GET /bounce/parameter/{variable}:
+      uriParameters:
+        variable: 123
+      response:
+        status: 200
+
     GET /parameters/prefix/one123:
       response:
         status: 200
@@ -338,6 +458,15 @@ tests:
         status: 200
 
     GET /parameters/prefix/three123123asda123:
+      response:
+        status: 200
+
+
+    GET /parameters/single/1:
+      response:
+        status: 200
+
+    GET /extensions/static.json:
       response:
         status: 200
 
@@ -354,6 +483,12 @@ tests:
         status: 200
 
     GET /extensions/media-type/enum-period.json:
+      response:
+        status: 200
+
+
+
+    GET /extensions/media-type/basic.json:
       response:
         status: 200
 

@@ -5,8 +5,10 @@
         "diagnostics": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "inlineSourceMap": true,
-        "inlineSources": true
+        "inlineSourceMap": false,
+        "inlineSources": false,
+        "sourceMap": true
+        //"allowJs": true
     },
     "exclude": [
         "typings/browser.d.ts",

@@ -6,12 +6,12 @@
     "url": "https://www.mulesoft.com"
   },
   "license": "MIT",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "dependencies": {
     "es6-promise": "^3.2.1",
     "expect": "^1.18.0",
     "glob": "^7.0.3",
-    "js-yaml": "3.6.0",
+    "jade": "^1.11.0",
     "jsonschema": "^1.1.0",
     "lodash": "^4.11.1",
     "methods": "^1.1.2",
@@ -20,6 +20,7 @@
     "raml-path-match": "^2.0.0",
     "supertest": "1.2.0",
     "url": "^0.11.0",
+    "yaml-ast-parser": "0.0.28",
     "yargs": "^4.7.0"
   },
   "devDependencies": {
@@ -28,13 +29,11 @@
     "coveralls": "^2.11.9",
     "express": "4.13.4",
     "istanbul": "^0.4.3",
-    "mocha-lcov-reporter": "^1.2.0",
-    "querystring": "0.2.0",
     "tslint": "^3.10.2"
   },
   "scripts": {
     "test": "mocha --reporter spec",
-    "coverage": "(`npm bin`/istanbul cover `npm bin`/_mocha -- -R mocha-lcov-reporter || true)",
+    "coverage": "(`npm bin`/istanbul cover `npm bin`/_mocha || true)",
     "test-travis": "npm run lint && npm run build && npm run coverage && npm run test && node bin/http-bat.js test/cli.spec.yml",
     "preversion": "npm test",
     "version": "echo VERSION",
@@ -46,15 +45,6 @@
     "url": "https://github.com/mulesoft-labs/http-bat",
     "type": "git"
   },
-  "files": [
-    "lib/ATL.js",
-    "lib/ATLHelpers.js",
-    "lib/Coverage.js",
-    "lib/bat.js",
-    "lib/Pointer.js",
-    "bin/http-bat.js",
-    "lib/RAMLCoverageReporter.js"
-  ],
   "main": "lib/bat.js",
   "bin": {
     "http-bat": "bin/http-bat.js"

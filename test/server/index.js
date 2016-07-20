@@ -84,12 +84,7 @@ app.post('/post-body/attach-file', busboy(), function (req, res) {
   req.pipe(req.busboy)
 });
 app.post('/post-body/url', bodyParser.urlencoded({ extended: true }), function (req, res) {
-  var ret = [];
-
-  for (var i in req.body) {
-    ret.push(req.body[i]);
-  }
-  res.json(ret);
+  res.json(req.body);
 });
 app.post('/post-body/form', busboy(), function (req, res) {
   var files = [];

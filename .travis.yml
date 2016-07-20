@@ -1,10 +1,10 @@
 language: node_js
 node_js:
-- '0.12'
+- 6
 script: npm run-script test-travis
 after_script: cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js
 deploy:
-  provider: npm
+- provider: npm
   email: agustin.mz.92@gmail.com
   skip_cleanup: true
   api_key:
@@ -12,3 +12,10 @@ deploy:
   on:
     tags: true
     repo: mulesoft-labs/http-bat
+- provider: releases
+  api_key:
+    secure: Wbwl4MQxBNRufSxTDHiWzD7LAzuf496InZhX0pVw4A6Rn7QA8kAhFHDEINod5SViyNTbk6w0YcnT+eHBeWzWzqEgzy5+AdHHvraLhYEx+0MiGHtYWZNZcuLkBMfpv6ORPYGgIZ99o2Cq7WouHbaS9vDwQENevJ+HhMdrHT9U1QCoIyn3Mq8lPcbbFAGYXyNMApE74EaZk5QcmQRsyj3GPCVg8/18/bUheWp4V3/P5xVPTzoHkKZXeinMlDopGxJGiqZt/D3DuqWwRHjnhm5Lwt8pUTPrXntAHjHRwCwgW9xrpUHnnLl0xVKzHzec/CSGzR2PdUB/KLVC0UE4jJGl6v5psHnX5h/ja6T2GYU+4AMOAiUx+M5mYLXMznXFyeuJ7W/RUODFFpQxSisBV9IcBTWiepnsPvNcNUY0nvkgqEMx6VQFFhebQPIgv2ImO7NND7NVr4vhmBGAccoGoajD/tcxfiJCclOMSWz6kUykukaAuN4HipOXDhxce3tJtQaWZd2EgInhgmbSa+uhiWZs7fUuOo8AP6f8GEXSecaVczHXs5aiBF433KHKFVRoZVTFDh4Qe7FooAF7sNdMEQ7yEaZeQlWhYZgZH3VmWhBIb9W7r23oDcRWeZqZJ4R79AawidrGfLyUCoC8m7Umzs+CajX1Nlw9dH84Do2FqZIaCYQ=
+  file: http-bat.tar.gz
+  on:
+    repo: mulesoft-labs/http-bat
+    tags: true

@@ -1,14 +1,33 @@
-
+// NODE
 import util = require('util');
 
+// NPM
 import methods = require('methods');
-import { ATL } from './ATL';
-import PointerLib = require('./Pointer');
 
-export const pointerLib = PointerLib;
+// LOCAL
+import { ATL } from './ATL';
+export import pointerLib = require('./Pointer');
+import { ATLError, ATLResponseAssertion, CommonAssertions } from './ATLAssertion';
+import { ATLRequest } from './ATLRequest';
+
+import { YAMLNode, YAMLSequence } from 'yaml-ast-parser';
+
+import { ASTParser, YAMLAstHelpers, NodeError, KeyValueObject } from './YAML';
+
 
 export interface IDictionary<T> {
   [key: string]: T;
+}
+
+/// ---
+
+export class CanceledError extends Error {
+  inspect() {
+    return 'CANCELED';
+  }
+  constructor() {
+    super('CANCELED');
+  }
 }
 
 /// ---
@@ -17,27 +36,85 @@ export class ATLSuite {
   constructor(public name: string) {
 
   }
-  suites: IDictionary<ATLSuite> = null;
+
+  dependsOn: ATLSuite[] = [];
+
+  suites: ATLSuite[] = null;
   async: boolean = false;
   descriptor: any = null;
   test: ATLTest = null;
   skip: boolean = false;
+  atl: ATL;
+
+  lastSuite: ATLSuite;
+  firstSuite: ATLSuite;
+
+  private flatPromise = flatPromise();
+
+  promise = this.flatPromise.promise;
+
+  run() {
+    let mutex = this.dependsOn.length ? Promise.all(this.dependsOn.map(x => x.promise)) : Promise.resolve();
+
+    mutex.then(() => {
+
+      if (this.test) {
+        let innerRun = this.test.run();
+        innerRun.then(() => this.flatPromise.resolver());
+        innerRun.catch(err => this.reject(err));
+      } else if (this.suites) {
+        if (!this.suites.length) {
+          this.flatPromise.resolver();
+        } else {
+          let innerMutex = Promise.all(this.suites.map(x => x.run()));
+          innerMutex.then(() => this.flatPromise.resolver());
+          innerMutex.catch(err => {
+            this.reject(err);
+          });
+        }
+      } else this.flatPromise.rejecter(new Error('Invalid suite. No tests and no sub suites found. ' + this.name));
+
+    });
+
+    mutex.catch(err => {
+      this.reject(err);
+    });
+
+    return this.promise;
+  }
+
+  private reject(error) {
+    if (this.skip && error instanceof Error) {
+      this.flatPromise.resolver();
+    } else {
+      this.flatPromise.rejecter(error);
+    }
+    this.cancel(error);
+  }
+
+  cancel(err: Error) {
+    this.flatPromise.rejecter(err);
+    if (this.test) this.test.cancel(err);
+    if (this.suites && this.suites.length) this.suites.forEach(x => x.cancel(err));
+  }
 }
 
 /// ---
 
 export interface IATLTestRes {
-  status?: number | string;
+  status?: number;
   body?: {
+    lowLevelNode?: ASTParser.YAMLNode;
     is?: any;
-    matches?: KeyValueObject<KeyValueObject<any>>[];
-    take?: KeyValueObject<PointerLib.Pointer>[];
-    copyTo?: PointerLib.Pointer;
+    matches?: KeyValueObject<any>[];
+    take?: KeyValueObject<pointerLib.Pointer>[];
+    copyTo?: pointerLib.Pointer;
     schema?: any;
     print?: boolean;
   };
   headers?: IDictionary<string>;
   print?: boolean;
+  lowLevelNode?: ASTParser.YAMLNode;
 }
 
 export interface IATLTestReq {
@@ -47,9 +124,12 @@ export interface IATLTestReq {
   urlencoded?: KeyValueObject<any>[];
   queryParameters?: IDictionary<any>;
   headers?: IDictionary<any>;
+  lowLevelNode?: ASTParser.YAMLNode;
 }
 
 export class ATLTest {
+  suite: ATLSuite;
+
   description: string;
   testId: string;
 
@@ -57,382 +137,459 @@ export class ATLTest {
 
   uri: string;
   uriParameters: IDictionary<any>;
+  skip: boolean = false;
 
-  timeout = 3000;
+  timeout = 30000;
 
   response: IATLTestRes = {};
   request: IATLTestReq = {};
 
-  dependsOn: ATLSuite[] = [];
-
-  skip: boolean = false;
-
   result: any;
 
-  private _resolve: (error?) => void;
-  private _reject: (error?) => void;
+  lowLevelNode: ASTParser.YAMLNode;
 
-  promise: Promise<any> = new Promise((a, b) => {
-    this._resolve = a;
-    this._reject = b;
-  });
+  private flatPromise = flatPromise();
 
-  resolve(result, error?: Error) {
-    this.result = result;
-    if (error) {
-      this._reject(error);
+  promise = this.flatPromise.promise;
+
+  requester: ATLRequest = new ATLRequest(this);
+  assertions: ATLResponseAssertion[] = [];
+
+  constructor() {
+    this.requester.promise
+      .catch(x => this.flatPromise.rejecter(x));
+  }
+
+  run(): Promise<void> {
+    if (this.skip) {
+      this.flatPromise.resolver();
+      return this.promise;
+    }
+
+    if (!this.assertions.length) {
+      this.requester.promise
+        .then(x => this.flatPromise.resolver());
     } else {
-      this._resolve(result);
-    }
-  }
-}
+      let assertionResults = Promise.all(this.assertions.map(x => x.promise));
 
-/// ---
+      assertionResults
+        .then(assertionResults => {
+          let errors = assertionResults.filter(x => !!x);
 
-export class KeyValueObject<T> {
-  constructor(public key: string, public value: T) {
-
-  }
-}
-
-/// ---
-
-export function parseSuites(object, instance: ATL): ATLSuite {
-
-  let suite = new ATLSuite("");
-
-  let ret: IDictionary<ATLSuite> = suite.suites = {};
-
-  let prevSuite = null;
-
-  for (let t in object) {
-    switch (t) {
-      case 'skip':
-        ensureInstanceOf("skip", object.skip, Number, Boolean);
-        suite.skip = !!object.skip;
-        break;
-
-      default:
-        let method = parseMethodHeader(t);
-
-        if (method) {
-          let methodBody = object[t];
-          let subSuite = new ATLSuite(methodBody.description || (method.method.toUpperCase() + ' ' + method.url));
-
-          subSuite.descriptor = methodBody;
-
-          let warn = function (msg) {
-            console.warn("Warning:\n\t" + subSuite.name + "\n\t\t" + msg);
-          };
-
-          try {
-            subSuite.test = parseTest(subSuite.descriptor, warn);
-          } catch (e) {
-            throw new Error((method.method.toUpperCase() + ' ' + method.url) + ", " + e);
+          if (errors.length) {
+            this.flatPromise.rejecter(errors);
+          } else {
+            this.flatPromise.resolver();
           }
+        });
 
-          subSuite.test.method = method.method;
-          subSuite.test.uri = method.url;
-
-          if (prevSuite)
-            subSuite.test.dependsOn.push(prevSuite);
-
-          prevSuite = subSuite;
-
-          ret[subSuite.name] = subSuite;
-        }
+      assertionResults
+        .catch(errors => {
+          this.flatPromise.rejecter(errors);
+        });
     }
+
+    this.requester.run();
+
+    return this.promise;
+  }
+
+  cancel(err: Error) {
+    try {
+      this.flatPromise.rejecter(err);
+    } catch (e) {
+
+    }
+
+    this.assertions.forEach(x => {
+      try {
+        x.cancel();
+      } catch (e) { }
+    });
+
+    try {
+      this.requester.cancel();
+    } catch (e) { }
+  }
+}
+
+/// ---
+
+
+const interpreteSuite = {
+  skip(suite: ATLSuite, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Boolean)) {
+      let skip = YAMLAstHelpers.readScalar(node);
+
+      suite.skip = !!skip;
+    }
+  },
+  async(suite: ATLSuite, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Boolean)) {
+      let async = YAMLAstHelpers.readScalar(node);
+
+      suite.async = !!async;
+    }
+  },
+  UNKNOWN(suite: ATLSuite, node: YAMLNode, name: string) {
+
+    let method = parseMethodHeader(name);
+
+    if (method) {
+      if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+
+
+
+        if (suite.suites.some(x => x.name == name)) {
+          throw new NodeError('Duplicated test name: ' + name, node);
+        }
+
+        let testSuite = new ATLSuite(name);
+
+
+
+        testSuite.atl = suite.atl;
+
+        testSuite.descriptor = YAMLAstHelpers.toObject(node);
+
+        testSuite.test = parseTest(node, suite);
+
+        testSuite.skip = testSuite.test.skip;
+
+        testSuite.test.method = method.method;
+        testSuite.test.uri = method.url;
+
+        if (suite.lastSuite)
+          testSuite.dependsOn.push(suite.lastSuite);
+
+        suite.lastSuite = testSuite;
+
+        if (!suite.firstSuite)
+          suite.firstSuite = testSuite;
+
+        suite.suites.push(testSuite);
+      }
+    } else {
+      throw new NodeError('Invalid node: ' + name, node);
+    }
+  }
+};
+
+
+const interpreteTest = {
+  uriParameters(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+      test.uriParameters = {};
+
+      let object = YAMLAstHelpers.getMap(node);
+
+      let keys = Object.keys(object);
+
+      keys.forEach(key => {
+        let val = YAMLAstHelpers.readScalar(object[key]) || object[key];
+        ensureInstanceOf("uriParameters." + key, val, Number, String, pointerLib.Pointer);
+        test.uriParameters[key] = val;
+      });
+    }
+  },
+  description(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, String)) {
+      let description = YAMLAstHelpers.readScalar(node);
+
+      ensureInstanceOf("description", description, String);
+
+      if (description.trim().length > 0) {
+        test.description = description;
+        // todo, check for duplicated descriptions
+      }
+    }
+  },
+  id(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, String, Number)) {
+      let id = YAMLAstHelpers.readScalar(node);
+
+      test.testId = id.toString();
+    }
+  },
+  timeout(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Number)) {
+      let value = YAMLAstHelpers.readScalar(node);
+
+      ensureInstanceOf("timeout", value, Number);
+
+      if (value <= 0)
+        throw new NodeError("timeout must be a number > 0", node);
+
+      test.timeout = value;
+    }
+  },
+  queryParameters(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+      test.request.queryParameters = test.request.queryParameters || {};
+
+      let object = YAMLAstHelpers.getMap(node);
+
+      let keys = Object.keys(object);
+
+      keys.forEach(key => {
+        let val = YAMLAstHelpers.readScalar(object[key]) || object[key];
+
+        ensureInstanceOf("queryParameters." + key, val, Number, String, Boolean, pointerLib.Pointer);
+        test.request.queryParameters[key] = val;
+      });
+    }
+  },
+  headers(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+      let object = YAMLAstHelpers.getMap(node);
+
+      let keys = Object.keys(object);
+
+      keys.forEach(key => {
+        let val = YAMLAstHelpers.readScalar(object[key]) || object[key];
+        ensureInstanceOf("headers." + key, val, String, pointerLib.Pointer);
+        test.request.headers[key.toLowerCase()] = val;
+      });
+    }
+  },
+  request(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+      parseRequest(test, node);
+    }
+  },
+  response(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+      parseResponse(test, node);
+    }
+  },
+  skip(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Boolean)) {
+      let id = YAMLAstHelpers.readScalar(node);
+
+      test.skip = !!id;
+
+      if (test.skip) {
+        test.requester.cancel();
+      }
+    }
+  }
+};
+
+
+
+export function parseSuites(sequenceName: string, node: YAMLNode, instance: ATL): ATLSuite {
+  let suite = new ATLSuite(sequenceName);
+
+  suite.atl = instance;
+
+  suite.suites = [];
+
+  YAMLAstHelpers.iterpretMap(node, interpreteSuite, false, suite);
+
+  if (suite.skip) {
+    // skips all the inner suites and tests
+    const recursiveSkip = (suite: ATLSuite) => {
+      suite.skip = true;
+      suite.suites && suite.suites.forEach(recursiveSkip);
+      suite.test && (suite.test.skip = true);
+    };
+
+    recursiveSkip(suite);
   }
 
   return suite;
 }
 
-export function parseTest(body, warn: (warn) => void): ATLTest {
+
+export function parseTest(node: YAMLNode, suite: ATLSuite): ATLTest {
   let test = new ATLTest;
+  test.suite = suite;
 
-  // parse uriParameters
-  if ('uriParameters' in body) {
-    if (!body.uriParameters || typeof body.uriParameters != "object" || body.uriParameters instanceof Array)
-      throw new TypeError("uriParameters must be an object");
-
-    test.uriParameters = {};
-
-    let keys = Object.keys(body.uriParameters);
-
-    keys.forEach(key => {
-      let val = body.uriParameters[key];
-      ensureInstanceOf("queryParameters." + key, val, Number, String, PointerLib.Pointer);
-      test.uriParameters[key] = val;
-    });
-  }
-
-  // parse method description
-  if ('description' in body) {
-    ensureInstanceOf("description", body.description, String);
-
-    if (body.description.trim().length > 0) {
-      test.description = body.description;
-    }
-  }
-
-  // parse method id
-  if ('id' in body) {
-    ensureInstanceOf("id", body.id, Number, String);
-
-    test.testId = body.id.toString();
-  }
-
-  // parse timeout
-  if ('timeout' in body) {
-    ensureInstanceOf("timeout", body.timeout, Number);
-
-    if (body.timeout <= 0)
-      throw new TypeError("timeout must be a number > 0");
-
-    test.timeout = body.timeout;
-  }
-
-
-  // parse queryParameters
-  if ('queryParameters' in body) {
-    if (!body.queryParameters || typeof body.queryParameters != "object" || body.queryParameters instanceof Array)
-      throw new TypeError("queryParameters must be an object");
-
-    test.request.queryParameters = test.request.queryParameters || {};
-
-    let keys = Object.keys(body.queryParameters);
-
-    keys.forEach(key => {
-      let val = body.queryParameters[key];
-      ensureInstanceOf("queryParameters." + key, val, Number, String, Boolean, PointerLib.Pointer);
-      test.request.queryParameters[key] = val;
-    });
-  }
+  test.lowLevelNode = node;
 
   test.request.headers = test.request.headers || {};
 
-  // parse headers
-  if ('headers' in body) {
-    if (!body.headers || typeof body.headers != "object" || body.headers instanceof Array)
-      throw new TypeError("headers must be an object");
+  YAMLAstHelpers.iterpretMap(node, interpreteTest, true, suite, test);
 
-    test.request.headers = test.request.headers || {};
-
-    let keys = Object.keys(body.headers);
-
-    keys.forEach(key => {
-      let val = body.headers[key];
-      ensureInstanceOf("headers." + key, val, String, PointerLib.Pointer);
-      test.request.headers[key.toLowerCase()] = val;
-    });
-  }
-
-  if ('request' in body) {
-    parseRequest(test, body.request, warn);
-  }
-
-  if ('skip' in body) {
-    ensureInstanceOf("skip", body.skip, Number, Boolean);
-    test.skip = !!body.skip;
-  }
-
-
-  if ('response' in body) {
-    parseResponse(test, body.response, warn);
-
-  } else {
+  if (!test.response || !test.response.status) {
     test.response.status = 200;
   }
+
+  generateTestAssertions(test);
 
   return test;
 }
 
-function parseRequest(test: ATLTest, request, warn) {
-  ensureInstanceOf("body.request", request, Object);
-  Object.keys(request).forEach(bodyKey => {
-    let value = request[bodyKey];
-    switch (bodyKey) {
-      case 'content-type': // ###############################################################
-        ensureInstanceOf("request.content-type", value, String, PointerLib.Pointer);
+const interpreteRequest = {
+  json(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    let value = YAMLAstHelpers.toObject(node);
 
-        test.request.headers = test.request.headers || {};
-        test.request.headers['content-type'] = value;
+    test.request.json = value;
+  },
 
-        break;
-      case 'json': // #######################################################################
-        test.request.json = value;
+  attach(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    let value = YAMLAstHelpers.readKVOElems<any>(node as any);
 
-        break;
-      case 'attach': // #####################################################################
-        ensureInstanceOf("request.attach", value, Array);
+    test.request.attach = [];
+    value.forEach(kvo => {
+      if (typeof kvo.value != "string")
+        new NodeError("request.attach.* must be a path", node);
+      else
+        test.request.attach.push(kvo);
+    });
+  },
 
-        test.request.attach = [];
-        for (let i in value) {
-          let currentAttachment = value[i];
-          for (let key in currentAttachment) {
-            test.request.attach.push(new KeyValueObject(key, currentAttachment[key]));
-            break;
-          }
-        }
+  form(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    let value = YAMLAstHelpers.readKVOElems(node as any);
 
-        break;
-      case 'form': // #######################################################################
-        if (!('content-type' in test.request.headers))
-          test.request.headers['content-type'] = "multipart/form-data";
-        else
-          throw new TypeError("you CAN'T use content-type AND form fields");
-
-        ensureInstanceOf("request.form", value, Array);
-
-        test.request.form = [];
-        for (let i in value) {
-          let currentAttachment = value[i];
-          for (let key in currentAttachment) {
-            test.request.form.push(new KeyValueObject(key, currentAttachment[key]));
-            break;
-          }
-        }
-
-        break;
-      case 'urlencoded': // #################################################################
-        if (!('content-type' in test.request.headers))
-          test.request.headers['content-type'] = "application/x-www-form-urlencoded";
-        else
-          throw new TypeError("you CAN'T use content-type AND urlencoded form");
-
-        ensureInstanceOf("request.urlencoded", value, Array);
-
-        test.request.urlencoded = value;
-
-        break;
-      default:
-        warn("Unknown identifier request." + bodyKey);
+    if (!('content-type' in test.request.headers)) {
+      test.request.headers['content-type'] = "multipart/form-data";
+    } else {
+      new NodeError("you CAN'T use content-type AND form fields", node);
+      return;
     }
-  });
+
+    test.request.form = value;
+  },
+
+  urlencoded(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    let value = YAMLAstHelpers.readKVOElems(node as any);
+
+    if (!('content-type' in test.request.headers)) {
+      test.request.headers['content-type'] = "application/x-www-form-urlencoded";
+    } else {
+      new NodeError("you CAN'T use content-type AND urlencoded form", node);
+    }
+
+    test.request.urlencoded = value;
+  }
+};
+
+const interpreteResponse = {
+  headers(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+      let value = YAMLAstHelpers.toObject(node);
+
+      test.response.headers = {};
+
+      let keys = Object.keys(value);
+
+      keys.forEach(key => {
+        let val = value[key];
+        ensureInstanceOf("response.headers." + key, val, String, pointerLib.Pointer);
+        test.response.headers[key.toLowerCase()] = val;
+      });
+    }
+  },
+  ['content-type'](suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, String)) {
+      let value = YAMLAstHelpers.readScalar(node);
+
+      test.response.headers = test.response.headers || {};
+
+      if ('content-type' in test.response.headers) {
+        new NodeError("response.content-type alredy registered as request.header.content-type You can not use BOTH", node);
+        return;
+      }
+
+      test.response.headers['content-type'] = value;
+    }
+  },
+  status(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Number)) {
+      let value = YAMLAstHelpers.readScalar(node);
+
+      test.response.status = parseInt(value) | 0;
+    }
+  },
+  print(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Boolean)) {
+      let value = YAMLAstHelpers.readScalar(node);
+
+      test.response.print = !!value;
+    }
+  },
+  body(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    parseResponseBody(test, node);
+  }
+};
+
+const interpreteResponseBody = {
+  ['is'](suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    let value = YAMLAstHelpers.toObject(node);
+    test.response.body.is = value;
+  },
+  matches(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    let value = YAMLAstHelpers.readKVOElems(node as any);
+
+    test.response.body.matches = value;
+  },
+  schema(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, String)) {
+      let value = YAMLAstHelpers.readScalar(node);
+
+      test.response.body.schema = value;
+    }
+  },
+  take(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.isSeq(node)) {
+      let value = YAMLAstHelpers.readKVOElems<any>(node as YAMLSequence);
+
+      test.response.body.take = [];
+
+      value.forEach(function (takenElement) {
+        if (!(takenElement.value instanceof pointerLib.Pointer))
+          node.errors.push(new NodeError("response.body.take.* must be a pointer ex: !!variable myValue", node) as any);
+        else
+          test.response.body.take.push(takenElement);
+      });
+    } else {
+      /* istanbul ignore else */
+      let value = YAMLAstHelpers.toObject(node);
+
+      if (value instanceof pointerLib.Pointer) {
+        test.response.body.copyTo = value;
+      } else {
+        new NodeError("response.body.take must be a sequence of pointers or a !!variable", node);
+      }
+    }
+
+  },
+  print(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    let value = YAMLAstHelpers.readScalar(node);
+
+    ensureInstanceOf("response.body.print", value, Boolean);
+
+    test.response.body.print = value;
+  }
+};
+
+function parseRequest(test: ATLTest, node: YAMLNode) {
+  test.request.lowLevelNode = node;
+  if (YAMLAstHelpers.isMap(node)) {
+    YAMLAstHelpers.iterpretMap(node, interpreteRequest, true, test.suite, test);
+  } else {
+    new NodeError("request must be a map", node);
+  }
 }
 
-function parseResponse(test: ATLTest, response, warn) {
-  ensureInstanceOf("response", response, Object);
-  Object.keys(response).forEach(bodyKey => {
-    let value = response[bodyKey];
-    switch (bodyKey) {
-      case 'headers': // ####################################################################
-        ensureInstanceOf("response.headers", value, Object);
-
-        test.response.headers = {};
-
-        let keys = Object.keys(value);
-
-        keys.forEach(key => {
-          let val = value[key];
-          ensureInstanceOf("response.headers." + key, val, String, PointerLib.Pointer);
-          test.response.headers[key.toLowerCase()] = val;
-        });
-
-        if (keys.length == 0) {
-          warn("response.headers: empty parameters");
-        }
-
-        break;
-      case 'contentType': // ################################################################
-      case 'content-type':
-        ensureInstanceOf("response.content-type", value, String, PointerLib.Pointer);
-
-        test.response.headers = test.response.headers || {};
-
-        if ('content-type' in test.response.headers)
-          throw new TypeError("response.content-type alredy registered as request.header.content-type You can not use BOTH");
-
-        test.response.headers['content-type'] = value;
-
-        break;
-      case 'status': // #####################################################################
-        ensureInstanceOf("response.status", value, Number);
-
-        test.response.status = value | 0;
-
-        break;
-      case 'print': // ######################################################################
-        ensureInstanceOf("response.print", value, Boolean);
-
-        test.response.print = value;
-        break;
-      case 'body':
-        parseResponseBody(test, value, warn);
-
-        break;
-      default:
-        warn("Unknown identifier response." + bodyKey);
-    }
-  });
+function parseResponse(test: ATLTest, node: YAMLNode) {
+  test.response.lowLevelNode = node;
+  if (YAMLAstHelpers.isMap(node)) {
+    YAMLAstHelpers.iterpretMap(node, interpreteResponse, true, test.suite, test);
+  } else {
+    new NodeError("response must be a map", node);
+  }
 }
 
-
-function parseResponseBody(test: ATLTest, responseBody, warn) {
-  ensureInstanceOf("response.body", responseBody, Object);
-
+function parseResponseBody(test: ATLTest, responseBody: YAMLNode) {
   test.response.body = {};
-
-  Object.keys(responseBody).forEach(bodyKey => {
-    let value = responseBody[bodyKey];
-    switch (bodyKey) {
-      case 'is': // ####################################################################
-        test.response.body.is = value;
-
-        break;
-      case 'matches': // ################################################################
-        ensureInstanceOf("response.body.matches", value, Array);
-
-        test.response.body.matches = [];
-
-        for (let i in value) {
-          let kv = value[i];
-          for (let i in kv) {
-            test.response.body.matches.push(new KeyValueObject(i, kv[i]));
-          }
-        }
-
-        break;
-      case 'schema': // #################################################################
-        ensureInstanceOf("response.body.schema", value, String, Object);
-
-        test.response.body.schema = value;
-
-        break;
-      case 'take': // #####################################################################
-        ensureInstanceOf("response.body.take", value, Array, PointerLib.Pointer);
-
-        if (value instanceof Array) {
-          test.response.body.take = [];
-          value.forEach(function (takenElement) {
-            for (let i in takenElement) {
-
-              if (!(takenElement[i] instanceof PointerLib.Pointer))
-                throw new Error("response.body.take.* must be a pointer ex: !!variable myValue");
-
-              test.response.body.take.push(new KeyValueObject(i, takenElement[i]));
-            }
-          });
-
-        } else {
-          /* istanbul ignore else */
-          if (value instanceof PointerLib.Pointer) {
-            test.response.body.copyTo = value;
-          } else {
-            throw new Error("response.body.take must be a sequence of pointers or a !!variable");
-          }
-        }
-
-        break;
-      case 'print':
-        ensureInstanceOf("response.body.print", value, Boolean);
-
-        test.response.body.print = value;
-        break;
-      default:
-        warn("Unknown identifier body.response." + bodyKey);
-    }
-  });
+  test.response.body.lowLevelNode = responseBody;
+  if (YAMLAstHelpers.isMap(responseBody)) {
+    YAMLAstHelpers.iterpretMap(responseBody, interpreteResponseBody, true, test.suite, test);
+  } else {
+    new NodeError("response.body must be a map", responseBody);
+  }
 }
 
 export function ensureInstanceOf(name: string, value: any, ...types: Function[]): void {
@@ -461,7 +618,7 @@ export function ensureInstanceOf(name: string, value: any, ...types: Function[])
     }
   }
 
-  throw new TypeError(name + " must be instance of " + types.map((x: any) => x && x.displayName || x && x.name || x.toString()).join(" | "));
+  throw new TypeError(name + " must be instance of " + types.map((x: any) => x && x.displayName || x && x.name || x.toString()).join(" | ") + " got " + util.inspect(value));
 }
 
 
@@ -491,6 +648,9 @@ export function parseMethodHeader(name) {
   // if the URL ends with "/"
   if (parts[1].substr(-1) == '/' && parts[1].length > 1)
     throw new Error("ERROR: the url must not ends with '/': " + name);
+
+  if (parts[1].indexOf('#') != -1)
+    parts[1] = parts[1].substr(0, parts[1].indexOf('#'));
 
   return {
     method: method,
@@ -531,7 +691,7 @@ function cloneObject(obj, store) {
     return newArray.map(x => cloneObject(x, store));
   }
 
-  if (obj instanceof PointerLib.Pointer) {
+  if (obj instanceof pointerLib.Pointer) {
     let result: any;
     try {
       result = cloneObject(obj.get(store), store);
@@ -561,19 +721,6 @@ function cloneObject(obj, store) {
 }
 
 
-export function matchUrl(url: string) {
-  // remove hash & queryString
-  url = url.split(/[?#]/)[0];
-
-  // normalize uriParameters to ?
-  url = url.replace(/\{([a-zA-Z0-9_]+)\}/g, function () {
-    return '?';
-  } as any);
-
-  return url;
-}
-
-
 export function flatPromise() {
   let result = {
     resolver: null as (a?: any) => any,
@@ -583,7 +730,10 @@ export function flatPromise() {
 
   result.promise = new Promise((a, b) => {
     result.resolver = a;
-    result.rejecter = b;
+    result.rejecter = function (x) {
+      b(x);
+      result.rejecter = function () { };
+    };
   });
 
   return result;
@@ -621,3 +771,62 @@ export function error(msg, ctx) {
 
 if (!(error('test', {}) instanceof Error)) process.exit(1);
 if (!(errorDiff('test', 1, 2, {}) instanceof Error)) process.exit(1);
+
+
+function generateTestAssertions(test: ATLTest) {
+  if (test.suite.skip) return;
+
+  if (test.response) {
+    if (test.response.status) {
+      test.assertions.push(
+        new CommonAssertions.StatusCodeAssertion(test, test.response.status)
+      );
+    }
+
+    if (test.response.body) {
+      if ('is' in test.response.body) {
+        test.assertions.push(
+          new CommonAssertions.BodyEqualsAssertion(test, test.response.body.is)
+        );
+      }
+
+      if (test.response.body.schema) {
+        test.assertions.push(
+          new CommonAssertions.ValidateSchemaOperation(test, test.response.body.schema)
+        );
+      }
+
+      if (test.response.body.matches) {
+        test.response.body.matches.forEach(kvo => {
+          test.assertions.push(
+            new CommonAssertions.BodyMatchesAssertion(test, kvo.key, kvo.value)
+          );
+        });
+      }
+
+      if (test.response.headers) {
+        for (let h in test.response.headers) {
+          test.assertions.push(
+            new CommonAssertions.HeaderMatchesAssertion(test, h, test.response.headers[h])
+          );
+        }
+      }
+
+      if (test.response.body.take) {
+        let take = test.response.body.take;
+
+        take.forEach(function (takenElement) {
+          test.assertions.push(
+            new CommonAssertions.CopyBodyValueOperation(test, takenElement.key, takenElement.value)
+          );
+        });
+      }
+
+      if (test.response.body.copyTo && test.response.body.copyTo instanceof pointerLib.Pointer) {
+        test.assertions.push(
+          new CommonAssertions.CopyBodyValueOperation(test, '*', test.response.body.copyTo)
+        );
+      }
+    }
+  }
+}

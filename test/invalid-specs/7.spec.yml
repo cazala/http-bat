@@ -1,0 +1,9 @@
+requires:
+  oauth: oauth.spec.yml
+
+tests:
+  "missing file":
+    POST /:
+      request:
+        attach:
+          - file: 'non-existent-file.txt'

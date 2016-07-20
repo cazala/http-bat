@@ -3,6 +3,12 @@ import util = require('util');
 import ATLHelpers = require('./ATLHelpers');
 import _ = require('lodash');
 import RAML = require('raml-1-parser');
+const jsonschema = require('jsonschema');
+import { SuperAgent, SuperAgentRequest, agent } from 'superagent';
+
+import { ASTParser, YAMLAstHelpers, NodeError, walkFindingErrors, printError } from './YAML';
+
+import { IFSResolver, FSResolver } from './FileSystem';
 
 import path = require('path');
 
@@ -21,9 +27,135 @@ export interface IATLOptions {
     resourceTypes: boolean;
     traits: boolean;
   };
+  FSResolver: IFSResolver;
 }
 
 export class ATL {
+
+  static interprete = {
+    baseUri(atl: ATL, node: ASTParser.YAMLNode) {
+      if (YAMLAstHelpers.ensureInstanceOf(node, String)) {
+        let value = YAMLAstHelpers.readScalar(node);
+
+        atl.options.baseUri = value;
+
+        if (atl.options.baseUri.substr(-1) === '/') {
+          atl.options.baseUri = atl.options.baseUri.substr(0, atl.options.baseUri.length - 1);
+        }
+      }
+    },
+    raml(atl: ATL, node: ASTParser.YAMLNode) {
+      if (YAMLAstHelpers.ensureInstanceOf(node, String)) {
+        let value = YAMLAstHelpers.readScalar(node);
+
+        try {
+          atl.raml = RAML.loadApiSync(value, { rejectOnErrors: true, fsResolver: atl.options.FSResolver });
+        } catch (e) {
+          if (e.parserErrors) {
+            throw path.resolve(value) + ':\n' + e.message + "\n" + e.parserErrors.map(x => "  " + x.message + " line " + x.line).join("\n");
+          } else {
+            console.log(util.inspect(e));
+          }
+          throw e;
+        }
+
+        let schemas = atl.raml.schemas();
+
+        for (let i in schemas) {
+          let schemaList = schemas[i].toJSON();
+          for (let schemaName in schemaList) {
+            let json = null;
+            try {
+              json = JSON.parse(schemaList[schemaName]);
+              atl._addSchema(schemaName, json);
+            } catch (e) {
+              e.message = 'Error parsing JSON schema ' + schemaName + '\n\t' + e.message + '\n' + util.inspect(schemaList[schemaName]);
+              throw e;
+            }
+          }
+        }
+      }
+    },
+    variables(atl: ATL, node: ASTParser.YAMLNode) {
+      if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+
+        let value = YAMLAstHelpers.toObject(node);
+
+        atl.options.variables = _.merge(atl.options.variables || {}, value);
+      }
+    },
+    options(atl: ATL, node: ASTParser.YAMLNode) {
+      if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+
+        let options = YAMLAstHelpers.toObject(node);
+
+        Object.keys(options).forEach(key => {
+          let value = options[key];
+
+          switch (key) {
+            case 'selfSignedCert':
+              ATLHelpers.ensureInstanceOf("options.selfSignedCert", value, Boolean);
+              atl.options.selfSignedCert = !!value;
+              break;
+            case 'raml':
+              ATLHelpers.ensureInstanceOf("options.raml", value, Object);
+              _.merge(atl.options.raml, value);
+              break;
+            default:
+              throw new TypeError("unknown option:" + key);
+          }
+        });
+      }
+    },
+    tests(atl: ATL, node: ASTParser.YAMLNode) {
+      if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+
+        let tests = YAMLAstHelpers.getMap(node);
+
+        let suite: ATLHelpers.ATLSuite = null;
+
+        for (let sequenceName in tests) {
+          if (YAMLAstHelpers.isMap(tests[sequenceName])) {
+            suite = ATLHelpers.parseSuites(sequenceName, tests[sequenceName], atl);
+            suite.name = sequenceName;
+
+            atl.suites[suite.name] = suite;
+          } else {
+            new NodeError("suites must be non-empty maps: " + sequenceName, node);
+          }
+        }
+      }
+    },
+    schemas(atl: ATL, node: ASTParser.YAMLNode) {
+      if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+
+        let schemas = YAMLAstHelpers.getMap(node);
+
+        if (schemas) {
+          for (let sequenceName in schemas) {
+            let schemaName: string = null;
+
+            if (YAMLAstHelpers.isInclude(schemas[sequenceName])) {
+              // load string schema by path
+              let include = YAMLAstHelpers.readInclude(schemas[sequenceName]);
+
+              let content = include.content(atl.options.FSResolver);
+              try {
+                let schemaBody = JSON.parse(content);
+                // TODO, load schema
+                atl._addSchema(sequenceName, schemaBody);
+              } catch (e) {
+                new NodeError("error adding schema " + sequenceName + ":" + include.path + ". " + e.toString(), schemas[sequenceName]);
+              }
+            } else {
+              new NodeError("schemas: invalid schema " + sequenceName + ", it must be a !include reference", schemas[sequenceName]);
+            }
+          }
+        }
+      }
+    }
+  };
+
   options: IATLOptions = {
     variables: {},
     path: null,
@@ -33,8 +165,19 @@ export class ATL {
       coverage: true,
       resourceTypes: true,
       traits: true
-    }
+    },
+    FSResolver: null
   };
+
+  constructor(options?: IATLOptions) {
+    if (options)
+      _.merge(this.options, options);
+
+    if (!this.options.FSResolver)
+      this.options.FSResolver = new FSResolver(this.options.path);
+  }
+
+  agent: SuperAgent<SuperAgentRequest>;
 
   raml: RAML.api08.Api | RAML.api10.Api;
 
@@ -42,165 +185,129 @@ export class ATL {
 
   schemas: ATLHelpers.IDictionary<any> = {};
 
-  fromObject(object: any) {
-    if (typeof object !== "object")
-      throw new TypeError("fromObject: the first parameter must be an object");
+  errors = [];
 
-    // merge the variables
-    if ('variables' in object) {
-      if (typeof object.variables != "object")
-        throw new TypeError("fromObject.variables: MUST be an object");
 
-      this.options.variables = _.merge(this.options.variables || {}, object.variables);
-    } else {
-      this.options.variables = this.options.variables || {};
-    }
+  allTests(): ATLHelpers.ATLTest[] {
+    let tests = [];
+
+    const walk = (suite: ATLHelpers.ATLSuite) => {
+      if (suite.test)
+        tests.push(suite.test);
+
+      if (suite.suites && Object.keys(suite.suites).length) {
+        for (let k in suite.suites)
+          walk(suite.suites[k]);
+      }
+    };
+
+    for (let suite in this.suites)
+      walk(this.suites[suite]);
+
+    return tests;
+  }
+
+  fromAST(astRoot: ASTParser.YAMLNode) {
+    this.options.variables = this.options.variables || {};
+
+    YAMLAstHelpers.iterpretMap(astRoot, ATL.interprete, true, this);
 
     // override variables.ENV if not exists or is an object
-
     if (!this.options.variables['ENV'] || typeof this.options.variables['ENV'] != "object")
       this.options.variables['ENV'] = {};
 
     _.extend(this.options.variables['ENV'], _.cloneDeep(process.env));
 
-    // prepare the baseUri
-    if ('baseUri' in object) {
-      if (typeof object.baseUri == "string")
-        this.options.baseUri = object.baseUri;
-      else
-        throw new TypeError("baseUri: invalid type");
+    this.allTests().forEach(x => this.replaceSchema(x));
 
-      if (this.options.baseUri.substr(-1) === '/') {
-        this.options.baseUri = this.options.baseUri.substr(0, this.options.baseUri.length - 1);
-      }
-    }
+    let requiredSuites: ATLHelpers.ATLSuite[] = [];
 
-    if ('options' in object) {
-      ATLHelpers.ensureInstanceOf("options", object.options, Object);
+    let lastSyncSuite: ATLHelpers.ATLSuite = null;
 
-      Object.keys(object.options).forEach(key => {
-        let value = object.options[key];
+    for (let suiteName in this.suites) {
+      let suite = this.suites[suiteName];
 
-        switch (key) {
-          case 'selfSignedCert':
-            ATLHelpers.ensureInstanceOf("options.selfSignedCert", value, Boolean);
-            this.options.selfSignedCert = !!value;
-            break;
-          case 'raml':
-            ATLHelpers.ensureInstanceOf("options.raml", value, Object);
-            _.merge(this.options.raml, value);
-            break;
-          default:
-            throw new TypeError("unknown option:" + key);
+      if (suite.async) {
+        if (lastSyncSuite) {
+          suite.dependsOn.push(lastSyncSuite);
         }
-      });
-    }
 
-    if ('baseUriParameters' in object) {
-      if (!object.baseUriParameters || typeof object.baseUriParameters != "object" || object.baseUriParameters instanceof Array)
-        throw new TypeError("baseUriParameters: MUST be a dictionary");
+        requiredSuites.push(suite);
+      } else {
+        requiredSuites.forEach(x =>
+          suite.dependsOn.push(x)
+        );
 
-      this.options.baseUriParameters = _.cloneDeep(object.baseUriParameters);
-    }
+        if (lastSyncSuite)
+          suite.dependsOn.push(lastSyncSuite);
 
-    // parse the tests
-    if ('tests' in object) {
-      if (!object.tests || typeof object.tests != "object" || object.tests instanceof Array) {
-        throw new TypeError("tests: MUST be a dictionary");
-      }
+        requiredSuites.length = 0;
 
-      let suite: ATLHelpers.ATLSuite = null;
-
-      for (let sequenceName in object.tests) {
-        suite = ATLHelpers.parseSuites(object.tests[sequenceName], this);
-        suite.name = sequenceName;
-
-        this.suites[suite.name] = suite;
+        lastSyncSuite = suite;
       }
     }
 
-    if ('schemas' in object) {
-      if (!object.schemas || !(object.schemas instanceof Array)) {
-        throw new TypeError("schemas: MUST be a list");
-      }
+    walkFindingErrors(astRoot, this.errors);
 
-      for (let sequenceName in object.schemas) {
-        let schemaName: string = null;
-
-        if (typeof object.schemas[sequenceName] == "string") {
-          // load string schema by path
-          // TODO, load schema
-          this._addSchema(sequenceName, {});
-
-        } else if (typeof object.schemas[sequenceName] == "object") {
-          this._addSchema(schemaName, object.schemas[sequenceName]);
-        } else {
-          throw new TypeError("schemas: invalid schema " + sequenceName);
-        }
-      }
-    }
-
-    if ('raml' in object) {
-      if (!object.raml || typeof object.raml != "string") {
-        throw new TypeError("raml: MUST be a string");
-      }
-
-      try {
-        this.raml = RAML.loadApiSync(object.raml, { rejectOnErrors: true });
-      } catch (e) {
-        if (e.parserErrors) {
-          throw path.resolve(object.raml) + ':\n' + e.message + "\n" + e.parserErrors.map(x => "  " + x.message + " line " + x.line).join("\n");
-        } else {
-          console.log(util.inspect(e));
-        }
-        throw e;
-      }
-
-      let schemas = this.raml.schemas();
-
-      for (let i in schemas) {
-        let schemaList = schemas[i].toJSON();
-        for (let schemaName in schemaList) {
-          let json = null;
-          try {
-            json = JSON.parse(schemaList[schemaName]);
-            this._addSchema(schemaName, json);
-          } catch (e) {
-            e.message = 'Error parsing JSON schema ' + schemaName + '\n\t' + e.message + '\n' + util.inspect(schemaList[schemaName]);
-            throw e;
-          }
-        }
-      }
-    }
-
-    for (let suiteKey in this.suites) {
-      this.replaceSchema(this.suites[suiteKey]);
-    }
+    return;
   }
 
-  private replaceSchema(suite: ATLHelpers.ATLSuite) {
-    if (suite.test && suite.test.response.body && suite.test.response.body.schema) {
-      if (typeof suite.test.response.body.schema == "string") {
-        if (suite.test.response.body.schema in this.schemas) {
-          suite.test.response.body.schema = this.schemas[suite.test.response.body.schema];
-        } else {
-          throw new Error('schema ' + suite.test.response.body.schema + ' not found on test ' + suite.test.method + ' ' + suite.test.uri);
+  obtainSchemaValidator(schema: any) {
+    let v = new jsonschema.Validator();
+
+    if (typeof schema == "string") {
+      if (schema in this.schemas) {
+        v.addSchema(this.schemas[schema], schema);
+        schema = this.schemas[schema];
+      } else {
+        try {
+          schema = JSON.parse(schema);
+          v.addSchema(schema);
+        } catch (e) {
+
         }
+      }
+    } else if (typeof schema == "object") {
+      v.addSchema(schema);
+    } else {
+      throw new Error('Invalid schema ' + util.inspect(schema));
+    }
+
+    if (v.unresolvedRefs && v.unresolvedRefs.length) {
+      while (v.unresolvedRefs && v.unresolvedRefs.length) {
+        let nextSchema = v.unresolvedRefs.shift();
+
+        let theSchema = this.schemas[nextSchema];
+
+        if (!theSchema)
+          throw new Error("schema " + nextSchema + " not found");
+
+        v.addSchema(theSchema, nextSchema);
       }
     }
 
-    if (suite.suites) {
-      for (let suiteKey in suite.suites) {
-        this.replaceSchema(suite.suites[suiteKey]);
+    return (content): { valid: boolean; errors: any[]; } => {
+      return v.validate(content, schema);
+    };
+  }
+
+  // Matches the schemas of the tests against the schemas of the ATL document
+  private replaceSchema(test: ATLHelpers.ATLTest) {
+    if (test && test.response.body && test.response.body.schema) {
+      if (typeof test.response.body.schema == "string") {
+        if (test.response.body.schema in this.schemas) {
+          test.response.body.schema = this.schemas[test.response.body.schema];
+        } else {
+          new NodeError('schema ' + test.response.body.schema + ' not found on test ' + test.method + ' ' + test.uri, test.response.body.lowLevelNode);
+        }
       }
     }
   }
 
   private _addSchema(schemaName: string, schema: any) {
-    if (schemaName in this.schemas)
-      throw new TypeError("schemas: duplicated schema " + schemaName);
-
-    // VALIDATE SCHEMA
+    if (schemaName in this.schemas) {
+      throw new Error("schemas: duplicated schema " + schemaName);
+    }
 
     this.schemas[schemaName] = schema;
   }

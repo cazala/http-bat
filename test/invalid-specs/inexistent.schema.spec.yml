@@ -1,0 +1,6 @@
+tests:
+  "JSON Response with schema":
+    GET /responses/json:
+      response:
+        body:
+          schema: test_schema

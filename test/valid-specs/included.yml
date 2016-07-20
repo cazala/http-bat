@@ -1,9 +1,3 @@
-/url:
-  type: methods
-  description: Bounce the URL of API requests back to the user.
-/body:
-  type: methods
-  description: Bounce the body of API requests back to the user.
 /headers:
   put:
     headers:

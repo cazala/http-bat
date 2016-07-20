@@ -1,0 +1,6 @@
+tests:
+  "a":
+    GET /:
+      response:
+        status: 200
+  "b":

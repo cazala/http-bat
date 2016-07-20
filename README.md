@@ -1,13 +1,16 @@
-![alt text](http://emojipedia-us.s3.amazonaws.com/cache/01/de/01de435caff4774e3ca70eb3b541e131.png "Bat")
-# Http Blackbox API Tester (`http-bat`) [![Coverage Status](https://coveralls.io/repos/github/mulesoft-labs/http-bat/badge.svg?branch=develop)](https://coveralls.io/github/mulesoft-labs/http-bat?branch=develop) [![Build Status](https://travis-ci.org/mulesoft-labs/http-bat.svg?branch=develop)](https://travis-ci.org/mulesoft-labs/http-bat)
+[![HTTP-BAT][logo-url]][repo-url]
+# Http Blackbox API Tester (`http-bat`) 
+[![NPM version][npm-image]][npm-url] [![NPM downloads][downloads-image]][npm-url] [![Build status][travis-image]][travis-url] [![Test coverage][coveralls-image]][coveralls-url]
 
-Describe your platform independient API tests using [ATL (Api Testing Language)](https://github.com/mulesoft-labs/http-bat/wiki/ATL-SPEC--(Api-Testing-Language)) and run them using `http-bat`. It also generate [coverage reports for your RAML files](https://coveralls.io/builds/6914230/source?filename=test%2Fserver%2Ffixtures%2Fexample.raml).
+Describe your platform independient API tests using [ATL (Api Testing Language)](https://github.com/mulesoft-labs/http-bat/wiki/ATL-SPEC--(Api-Testing-Language)) and run them using `http-bat`. It also generates [coverage reports for your RAML files](https://coveralls.io/builds/6914230/source?filename=test%2Fserver%2Ffixtures%2Fexample.raml).
 
 ## Usage
 
-### Using command line, usefull for CI
+## Install
 
-Install the tool using `npm install http-bat -g`
+Install the tool executing `npm install -g http-bat`
+
+### Using command line, usefull for CI
 
 Run your tests on `api` folder:
 ```
@@ -29,15 +32,15 @@ $ npm install http-bat --save-dev
 > `test/api.spec.js` <- mocha spec
 
 ```javascript
-const lib = require('http-bat');
+import { Bat }  from 'http-bat';
 
 const app = require('../app'); //express server
 
-const bat = new lib.Bat();
+const tester = new Bat({
+  file: 'test-1.spec.yml'
+});
 
-bat.load(__dirname + '/test-1.yml');
-bat.run(app /* you could provide an URL too */);
-
+tester.run(app /* you could provide an URL too */);
 ```
 
 ### Execute mocha on your project
@@ -48,9 +51,6 @@ $ mocha
 
 ![Imgur](http://i.imgur.com/zoV5lH7.gif)
 
-## Demo project
-
-[http-bat-demo](https://github.com/menduz/http-bat-demo)
 
 ## Current features
 
@@ -69,6 +69,8 @@ You can read the entire list on [this page](https://github.com/mulesoft-labs/htt
 ### Test response status code
 
 ```yaml
+#%ATL 1.0
+
 tests:
   "Favicon must exists":
     GET /favicon.ico:
@@ -87,6 +89,8 @@ tests:
 ### Send query string parameters
 
 ```yaml
+#%ATL 1.0
+
 tests:
   "Inline query string":
     GET /orders?page=10:
@@ -102,7 +106,7 @@ tests:
     # The final url will be /orders?page=10&qty=20 
     GET /orders?page={----asd---}&qty=20:
       queryParameters:
-        page: 10                 
+        page: 10
       response:
         status: 200
 ```
@@ -110,6 +114,8 @@ tests:
 ### Validate response ´Content-Type´
 
 ```yaml
+#%ATL 1.0
+
 tests:
   "Must return text":
     GET /responses/text:
@@ -128,6 +134,8 @@ tests:
 ### Send headers
 
 ```yaml
+#%ATL 1.0
+
 tests:
   "Headers":
     GET /profile#UNAUTHORIZED:
@@ -145,6 +153,8 @@ tests:
 ### Validate response headers
 
 ```yaml
+#%ATL 1.0
+
 tests:
   "Headers":
     PUT /bounce/headers:
@@ -156,6 +166,8 @@ tests:
 ### Validate response content
 
 ```yaml
+#%ATL 1.0
+
 tests:
   "Must validate response body":
     GET /text:
@@ -185,6 +197,8 @@ tests:
 ### Validate response (partially)
 
 ```yaml
+#%ATL 1.0
+
 tests:
   "Must validate response body":
     GET /json:
@@ -214,8 +228,9 @@ tests:
 ## Execute in sequence. Obtain access token
 
 ```yaml
+#%ATL 1.0
 
-stores: # anything can be stored here
+variables: # anything can be stored here
   oauth:
     accessToken: "INVALID_TOKEN"
 
@@ -254,6 +269,8 @@ tests:
 Also shows how use ENVIRONMENTS variables. ENV variables are stored on variables.ENV, can be accessed using `!!variable ENV.*`
 
 ```yaml
+#%ATL 1.0
+
 variables:
   ENV:
     csToken: Bearer <<YOU MUST DEFINE YOUR csToken ON ENV>>
@@ -293,7 +310,7 @@ tests:
         status: 200
         body:
           matches:
-            id: !!variable projectNuevo.id
+            - id: !!variable projectNuevo.id
 
     PUT /organizations/{orgId}/projects/{projectId}:
       uriParameters:
@@ -328,3 +345,15 @@ tests:
         status: 404
 
 ```
+
+
+
+[repo-url]:https://github.com/mulesoft-labs/http-bat
+[logo-url]:http://emojipedia-us.s3.amazonaws.com/cache/01/de/01de435caff4774e3ca70eb3b541e131.png
+[npm-image]:https://img.shields.io/npm/v/http-bat.svg?style=flat
+[npm-url]: https://npmjs.org/package/http-bat
+[downloads-image]:https://img.shields.io/npm/dt/http-bat.svg?style=flat
+[travis-image]: https://img.shields.io/travis/mulesoft-labs/http-bat.svg?branch=develop?style=flat
+[travis-url]: https://travis-ci.org/mulesoft-labs/http-bat
+[coveralls-image]: https://img.shields.io/coveralls/mulesoft-labs/http-bat.svg?style=flat
+[coveralls-url]: https://coveralls.io/r/mulesoft-labs/raml-generator?branch=develop

@@ -1,4 +1,4 @@
-baseUri: https://www.google.com
+baseUri: https://api.github.com
 
 variables:
   connectionHeader: close
@@ -14,3 +14,4 @@ tests:
       response:
         headers:
           connection: !!variable connectionHeader
+        status: 200

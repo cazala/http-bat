@@ -1,0 +1,9 @@
+baseUri: http://www.google.com
+
+tests:
+  "A":
+    GET /:
+      response:
+        body:
+          matches:
+            a: "200"
