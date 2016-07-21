@@ -121,6 +121,7 @@ export namespace YAMLAstHelpers {
 
     if (!node.doubleQuoted && typeof node.value == "string") {
       if (node.value == "true") return true;
+      if (node.value == "null") return null;
       if (node.value == "false") return false;
       if (/^-?\d+\.?\d*$/.test(node.value)) {
         try {

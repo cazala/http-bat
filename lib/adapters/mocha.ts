@@ -29,6 +29,7 @@ function runSuite(suite: ATLSuite): Promise<boolean> {
           });
       });
 
+
       test.assertions.forEach(x => {
         (x.skip ? it.skip : it)(x.name, function (done) {
           this.timeout(test.timeout + 100);
@@ -43,6 +44,25 @@ function runSuite(suite: ATLSuite): Promise<boolean> {
               done(err);
             });
         });
+      });
+
+      it('Result', function (done) {
+        this.timeout(test.timeout + 100);
+        test
+          .promise
+          .then(response => {
+            done();
+          })
+          .catch(err => {
+            done(new Error("Test failed"
+              + "\nREQUEST = " + JSON.stringify(
+                test.requester.superAgentRequest, null, 2
+              )
+              + "\nRESPONSE = " + JSON.stringify(
+                test.requester.superAgentResponse, null, 2
+              ))
+            );
+          });
       });
     });
 

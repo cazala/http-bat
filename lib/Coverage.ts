@@ -166,7 +166,11 @@ export class CoverageResource {
   constructor(public resource: RAML.api08.Resource, public ramlCoverage: RAMLCoverage) {
     this.relativeUrl = resource.completeRelativeUri();
 
-    this.uriParameters = resource.absoluteUriParameters().map(x => x.toJSON());
+    try {
+      this.uriParameters = resource.absoluteUriParameters().map(x => x.toJSON());
+    } catch (e) {
+      throw new Error("Couldn't get RAML uriParameters, please ensure to have `baseUri` defined on your raml: " + e.toString());
+    }
 
     this.matches = pathMatch(this.relativeUrl, this.uriParameters);
     this.generateAssertions();

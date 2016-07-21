@@ -4,6 +4,8 @@ Check for duplicated tests on a suite
 Check for duplicated suite names
 
 
+null parse on yaml
+
 must fail:
   GET /:
     queryParameters:

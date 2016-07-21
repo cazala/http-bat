@@ -470,7 +470,7 @@ const interpreteResponse = {
     if (YAMLAstHelpers.ensureInstanceOf(node, Object)) {
       let value = YAMLAstHelpers.toObject(node);
 
-      test.response.headers = {};
+      test.response.headers = test.response.headers || {};
 
       let keys = Object.keys(value);
 

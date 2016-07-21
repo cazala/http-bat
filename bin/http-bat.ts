@@ -130,7 +130,7 @@ runner.on('end', function (failures) {
 
       COVReport.write(path.resolve(cwd, 'coverage/raml.html'));
     } catch (e) {
-      console.log(e);
+      // console.log(e);
     }
 
     instances.forEach(function (x) { x.RAMLCoverage && x.RAMLCoverage.writeCoverage(coverageFile); });
