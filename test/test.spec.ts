@@ -133,14 +133,16 @@ describe('HTTP CALLS', function () {
   instance.run(app)
     .then(function (error) {
       console.error(error);
+
       printAll();
+
+      instance.RAMLCoverage && instance.RAMLCoverage.writeCoverage(__dirname + '/../coverage/lcov.info');
     })
     .catch(function (error) {
       console.error(error);
+
       printAll();
+
+      instance.RAMLCoverage && instance.RAMLCoverage.writeCoverage(__dirname + '/../coverage/lcov.info');
     });
 });
-
-/*after(function () {
-  instance.writeCoverage('../coverage/lcov.info');
-});*/

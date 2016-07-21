@@ -79,8 +79,8 @@ export class CoverageAssertion {
     if (lowLevelAST) {
       this.src_file = lowLevelAST.unit().absolutePath();
       if (this.src_file) {
-        this.src_line = lowLevelAST.unit().lineMapper().position(lowLevelAST.start()).line;
-        this.src_line_end = lowLevelAST.unit().lineMapper().position(lowLevelAST.end()).line;
+        this.src_line = lowLevelAST.unit().lineMapper().position(lowLevelAST.start()).line + 1;
+        this.src_line_end = lowLevelAST.unit().lineMapper().position(lowLevelAST.end()).line + 1;
         this.src_start = lowLevelAST.start();
         this.src_end = lowLevelAST.end();
       }
@@ -169,7 +169,7 @@ export class CoverageResource {
     try {
       this.uriParameters = resource.absoluteUriParameters().map(x => x.toJSON());
     } catch (e) {
-      throw new Error("Couldn't get RAML uriParameters, please ensure to have `baseUri` defined on your raml: " + e.toString());
+      // https://github.com/raml-org/raml-js-parser-2/issues/370
     }
 
     this.matches = pathMatch(this.relativeUrl, this.uriParameters);
@@ -187,8 +187,6 @@ export class CoverageResource {
     let type = this.resource.type();
 
     methods = methods.concat(this.resource.methods());
-
-    // console.log(util.inspect(this.resource.toJSON(), false, 10, true));
 
     methods.forEach(method => {
       let methodName = method.method().toUpperCase();

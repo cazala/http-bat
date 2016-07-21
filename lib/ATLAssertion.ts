@@ -275,5 +275,4 @@ export namespace CommonAssertions {
       }
     }
   }
-
 }

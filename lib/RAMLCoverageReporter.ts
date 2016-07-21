@@ -19,7 +19,7 @@ export function generateString(filename: string, data: ICovData): string {
     num++;
 
     if (typeof data[num] !== "undefined") {
-      sout.push('DA:' + (num + 1) + ',' + data[num] + '\n');
+      sout.push('DA:' + num + ',' + data[num] + '\n');
     }
   });
 
@@ -27,7 +27,6 @@ export function generateString(filename: string, data: ICovData): string {
 
   return sout.join('');
 }
-
 
 
 /**
@@ -38,7 +37,7 @@ const JSONCov = require('mocha/lib/reporters/json-cov');
 
 import { readFileSync, writeFileSync } from 'fs';
 
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 
 
 /**
@@ -48,8 +47,8 @@ import { join, dirname } from 'path';
  * @param {Runner} runner
  */
 export function HTMLCov(runner) {
-  let jade = require('jade');
-  let file = require.resolve('mocha/lib/reporters/templates/coverage.jade');
+  let jade = require('pug');
+  let file = resolve(__dirname, '../coverage-report/coverage.pug');
   let str = readFileSync(file, 'utf8');
   let fn = jade.compile(str, { filename: file });
   let self = new JSONCov(runner, false);
@@ -60,10 +59,9 @@ export function HTMLCov(runner) {
         cov: self.cov,
         coverageClass: coverageClass
       });
-
-      console.log(content);
-
+      console.log('Writing ' + destFile);
       writeFileSync(destFile, content);
+      console.log('Writing ' + destFile + '. OK!');
     }
   };
 }

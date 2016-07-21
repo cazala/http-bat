@@ -59,6 +59,12 @@ export class ATL {
           throw e;
         }
 
+        // try to get absoluteUriParameters
+        (atl.raml.allResources()[0].absoluteUriParameters() as Array<any>).map(x => x);
+
+        (atl.raml.allBaseUriParameters() as Array<any>).map(x => x);
+
+
         let schemas = atl.raml.schemas();
 
         for (let i in schemas) {
