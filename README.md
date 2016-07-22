@@ -353,7 +353,7 @@ tests:
 [npm-image]:https://img.shields.io/npm/v/http-bat.svg?style=flat
 [npm-url]: https://npmjs.org/package/http-bat
 [downloads-image]:https://img.shields.io/npm/dt/http-bat.svg?style=flat
-[travis-image]: https://img.shields.io/travis/mulesoft-labs/http-bat.svg?branch=develop?style=flat
+[travis-image]: https://travis-ci.org/mulesoft-labs/http-bat.svg?branch=develop&style=flat
 [travis-url]: https://travis-ci.org/mulesoft-labs/http-bat
 [coveralls-image]: https://img.shields.io/coveralls/mulesoft-labs/http-bat.svg?style=flat
 [coveralls-url]: https://coveralls.io/r/mulesoft-labs/raml-generator?branch=develop
