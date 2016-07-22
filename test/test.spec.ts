@@ -2,6 +2,7 @@ const app = require('./server');
 import {Bat} from '../dist/lib/bat';
 import ATLHelpers = require('../dist/lib/ATLHelpers');
 import util = require('util');
+import registerMochaSuites = require('../dist/lib/adapters/mocha');
 
 
 const instance = new Bat({
@@ -127,8 +128,7 @@ describe('HTTP CALLS', function () {
     .forEach(suiteHandler);
 
 
-  let registerMochaSuites = require('../lib/adapters/mocha').registerMochaSuites;
-  registerMochaSuites(instance);
+  registerMochaSuites.registerMochaSuites(instance);
 
   instance.run(app)
     .then(function (error) {

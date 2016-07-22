@@ -39,7 +39,7 @@ let schema = new Schema({
 export function walkFindingErrors(node, errors: ASTParser.Error[]) {
   if (node && node.errors && node.errors.length) {
     node.errors.forEach(err => {
-      if (err) {
+      if (err && typeof err == "object") {
         err.node = err.node || node;
       }
       if (errors.indexOf(err) == -1)
