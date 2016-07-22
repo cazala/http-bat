@@ -35,19 +35,18 @@
   "scripts": {
     "test": "mocha --reporter spec",
     "coverage": "(`npm bin`/istanbul cover `npm bin`/_mocha || true)",
-    "test-travis": "npm run lint && npm run build && npm run coverage && npm run test && node bin/http-bat.js test/cli.spec.yml",
+    "test-travis": "npm run lint && npm run build && npm run coverage && npm run test && node dist/bin/http-bat.js test/cli.spec.yml",
     "preversion": "npm test",
     "version": "echo VERSION",
     "postversion": "git push && git push --tags",
     "lint": "`npm bin`/tslint -t msbuild src/**/*.ts",
-    "build": "rm -rf dist && `npm bin`/tsc -p tsconfig.json && `npm bin`/tsc -p tsconfig-tests.json"
+    "build": "rm -rf dist && typings install && `npm bin`/tsc -p tsconfig.json && `npm bin`/tsc -p tsconfig-tests.json"
   },
   "repository": {
     "url": "https://github.com/mulesoft-labs/http-bat",
     "type": "git"
   },
   "main": "dist/lib/bat.js",
-  "typings": "dist/lib/bat.d.ts",
   "bin": {
     "http-bat": "dist/bin/http-bat.js"
   }

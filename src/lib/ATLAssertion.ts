@@ -31,7 +31,7 @@ export abstract class ATLAssertion {
   skip: boolean = false;
 
   constructor(public parent: ATLTest) {
-    this.promise = Promise.reject(null);
+    this.promise = Promise.reject(null) as any;
   }
 
   error(data: { actual?: any; expected?: any; message: string }) {

@@ -1,6 +1,11 @@
 {
+  "name": "http-bat",
+  "version": false,
   "dependencies": {
-    "raml-1-parser": "npm:raml-1-parser",
-    "yaml-ast-parser": "npm:yaml-ast-parser"
+    "es6-promise": "registry:npm/es6-promise#3.0.0+20160211003958",
+    "lodash": "registry:npm/lodash#4.0.0+20160701205107"
+  },
+  "globalDependencies": {
+    "node": "github:borisyankov/DefinitelyTyped/node/node.d.ts#b37afda34daa6186c3f143609555fcd6d70b249f"
   }
 }

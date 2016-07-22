@@ -1,4 +1,3 @@
-/// <reference path="../../typings/main.d.ts" />
 export import PointerType = require('./Pointer');
 export import Parser = require('yaml-ast-parser');
 export import ASTParser = require('yaml-ast-parser');

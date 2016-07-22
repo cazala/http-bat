@@ -13,7 +13,6 @@
         "node_modules",
         "typings/browser",
         "typings/browser.d.ts",
-        "src",
-        "dist"
+        "src"
     ]
 }

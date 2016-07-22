@@ -12,7 +12,7 @@ import _ = require('lodash');
 import { ATLTest, cloneObjectUsingPointers, flatPromise, CanceledError } from './ATLHelpers';
 import { Pointer } from './Pointer';
 
-const reIsInterpolation = /\{([^.[\]\}\{]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\3)[^\\\{\}]|\\.)*?)\3)\]|(?=(\.|\[\])(?:\5|$)))\}{1}/g;
+const reIsInterpolation = /[^\\]\{([^\}\{]+)\}/g;
 
 export class ATLRequest {
   urlObject: url.Url;

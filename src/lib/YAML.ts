@@ -1,5 +1,3 @@
-/// <reference path="../../typings/main.d.ts" />
-
 export import PointerType = require('./Pointer');
 export import Parser = require('yaml-ast-parser');
 
@@ -89,7 +87,7 @@ export function printError(error: NodeError) {
   console.log(getErrorString(error));
 
   if (!(error instanceof NodeError)) {
-    console.log(error.stack);
+    console.log((error as any).stack);
   }
 }
 

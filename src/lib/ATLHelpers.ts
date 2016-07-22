@@ -54,7 +54,7 @@ export class ATLSuite {
   promise = this.flatPromise.promise;
 
   run() {
-    let mutex = this.dependsOn.length ? Promise.all(this.dependsOn.map(x => x.promise)) : Promise.resolve();
+    let mutex: Promise<any> = this.dependsOn.length ? Promise.all(this.dependsOn.map(x => x.promise)) : Promise.resolve();
 
     mutex.then(() => {
 

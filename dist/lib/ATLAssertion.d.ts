@@ -33,7 +33,7 @@ export declare namespace CommonAssertions {
     class PromiseAssertion extends ATLResponseAssertion {
         evaluator: (res: Response) => Promise<Error | ATLError | void>;
         constructor(parent: ATLTest, name: string, evaluator: (res: Response) => Promise<Error | ATLError | void>);
-        validate(response: Response): Promise<any>;
+        validate(response: Response): Promise<Error | ATLError | void>;
     }
     class StatusCodeAssertion extends ATLResponseAssertion {
         statusCode: number;

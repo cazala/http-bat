@@ -16,3 +16,15 @@ must pass and generate 2 tests:
     ..
   GET /#:
     ..
+
+
+
+
+
+
+tests:
+  "Create project tests":
+    POST /organizations/{ENV.organizationId}/projects:
+      #                  ^
+      response:
+        status: 201

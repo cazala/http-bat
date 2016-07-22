@@ -1,14 +1,14 @@
 "use strict";
-var LineMapper = (function () {
-    function LineMapper(content, absPath) {
+class LineMapper {
+    constructor(content, absPath) {
         this.content = content;
         this.absPath = absPath;
     }
-    LineMapper.prototype.position = function (_pos) {
-        var pos = _pos;
+    position(_pos) {
+        let pos = _pos;
         this.initMapping();
-        for (var i = 0; i < this.mapping.length; i++) {
-            var lineLength = this.mapping[i];
+        for (let i = 0; i < this.mapping.length; i++) {
+            let lineLength = this.mapping[i];
             if (pos < lineLength) {
                 return {
                     line: i,
@@ -34,19 +34,19 @@ var LineMapper = (function () {
                 position: _pos - 1
             };
         }
-        throw new Error("Character position exceeds text length: " + _pos + " > + " + this.content.length + ". Unit path: " + this.absPath);
-    };
-    LineMapper.prototype.initMapping = function () {
+        throw new Error(`Character position exceeds text length: ${_pos} > + ${this.content.length}. Unit path: ${this.absPath}`);
+    }
+    initMapping() {
         if (this.mapping != null) {
             return;
         }
         if (this.content == null) {
-            throw new Error("Line Mapper has been given null content" + (this.absPath != null ? ('. Path: ' + this.absPath) : ' and null path.'));
+            throw new Error(`Line Mapper has been given null content${this.absPath != null ? ('. Path: ' + this.absPath) : ' and null path.'}`);
         }
         this.mapping = [];
-        var ind = 0;
-        var l = this.content.length;
-        for (var i = 0; i < l; i++) {
+        let ind = 0;
+        let l = this.content.length;
+        for (let i = 0; i < l; i++) {
             if (this.content.charAt(i) == '\r') {
                 if (i < l - 1 && this.content.charAt(i + 1) == '\n') {
                     this.mapping.push(i - ind + 2);
@@ -64,8 +64,7 @@ var LineMapper = (function () {
             }
         }
         this.mapping.push(l - ind);
-    };
-    return LineMapper;
-}());
+    }
+}
 exports.LineMapper = LineMapper;
 //# sourceMappingURL=LineMapper.js.map

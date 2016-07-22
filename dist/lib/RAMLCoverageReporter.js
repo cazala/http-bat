@@ -8,7 +8,7 @@
  * @api public
  */
 function generateString(filename, data) {
-    var sout = [];
+    let sout = [];
     sout.push('SF:' + filename + '\n');
     data.source.forEach(function (line, num) {
         // increase the line number, as JS arrays are zero-based
@@ -24,9 +24,9 @@ exports.generateString = generateString;
 /**
  * Module dependencies.
  */
-var JSONCov = require('mocha/lib/reporters/json-cov');
-var fs_1 = require('fs');
-var path_1 = require('path');
+const JSONCov = require('mocha/lib/reporters/json-cov');
+const fs_1 = require('fs');
+const path_1 = require('path');
 /**
  * Initialize a new `JsCoverage` reporter.
  *
@@ -34,14 +34,14 @@ var path_1 = require('path');
  * @param {Runner} runner
  */
 function HTMLCov(runner) {
-    var jade = require('pug');
-    var file = path_1.resolve(__dirname, '../coverage-report/coverage.pug');
-    var str = fs_1.readFileSync(file, 'utf8');
-    var fn = jade.compile(str, { filename: file });
-    var self = new JSONCov(runner, false);
+    let jade = require('pug');
+    let file = path_1.resolve(__dirname, '../coverage-report/coverage.pug');
+    let str = fs_1.readFileSync(file, 'utf8');
+    let fn = jade.compile(str, { filename: file });
+    let self = new JSONCov(runner, false);
     return {
-        write: function (destFile) {
-            var content = fn({
+        write(destFile) {
+            let content = fn({
                 cov: self.cov,
                 coverageClass: coverageClass
             });

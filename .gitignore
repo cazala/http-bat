@@ -43,3 +43,4 @@ terminal.glue
 *.zip
 
 .alm
+typings

@@ -9,6 +9,8 @@ import { CoverageResource, CoverageAssertion } from '../Coverage';
 
 declare var describe, it;
 
+const stringRepresentation = (x) => inspect(x, false, 30, true);
+
 function runSuite(suite: ATLSuite): Promise<boolean> {
   let execFn = suite.skip ? describe.skip : describe;
 
@@ -55,13 +57,12 @@ function runSuite(suite: ATLSuite): Promise<boolean> {
           })
           .catch(err => {
             done(new Error("Test failed"
-              + "\nREQUEST = " + JSON.stringify(
-                test.requester.superAgentRequest, null, 2
-              )
+              + "\nURL = " + stringRepresentation(test.requester.url)
               + "\nRESPONSE = " + JSON.stringify(
                 test.requester.superAgentResponse, null, 2
-              ))
-            );
+              )
+              + "\BODY = " + stringRepresentation(test.requester.superAgentResponse.body)
+            ));
           });
       });
     });
