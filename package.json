@@ -46,6 +46,7 @@
     "type": "git"
   },
   "main": "lib/bat.js",
+  "typings": "lib/bat.ts",
   "bin": {
     "http-bat": "bin/http-bat.js"
   }
