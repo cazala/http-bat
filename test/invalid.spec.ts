@@ -1,5 +1,5 @@
-import { Bat } from '../lib/bat';
-import YAML = require('../lib/YAML');
+import { Bat } from '../dist/lib/bat';
+import YAML = require('../dist/lib/YAML');
 
 const glob = require('glob');
 

@@ -7,15 +7,13 @@
         "experimentalDecorators": true,
         "inlineSourceMap": false,
         "inlineSources": false,
-        "sourceMap": true,
-        "declaration": true,
-        "outDir": "dist"
+        "sourceMap": true
     },
     "exclude": [
         "node_modules",
         "typings/browser",
         "typings/browser.d.ts",
-        "test",
+        "src",
         "dist"
     ]
 }

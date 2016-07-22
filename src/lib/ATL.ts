@@ -58,11 +58,14 @@ export class ATL {
           }
           throw e;
         }
+        try {
+          // try to get absoluteUriParameters
+          (atl.raml.allResources()[0].absoluteUriParameters() as Array<any>).map(x => x);
 
-        // try to get absoluteUriParameters
-        (atl.raml.allResources()[0].absoluteUriParameters() as Array<any>).map(x => x);
-
-        (atl.raml.allBaseUriParameters() as Array<any>).map(x => x);
+          (atl.raml.allBaseUriParameters() as Array<any>).map(x => x);
+        } catch (e) {
+          new NodeError("raml file must have baseUri", node);
+        }
 
 
         let schemas = atl.raml.schemas();

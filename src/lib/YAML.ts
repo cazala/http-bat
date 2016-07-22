@@ -1,3 +1,5 @@
+/// <reference path="../../typings/main.d.ts" />
+
 export import PointerType = require('./Pointer');
 export import Parser = require('yaml-ast-parser');
 
@@ -91,7 +93,7 @@ export function printError(error: NodeError) {
   }
 }
 
-export function load(content: string) {
+export function load(content: string): ASTParser.YAMLDocument {
   let errors: ASTParser.Error[] = [];
 
   let parsed = Parser.load(content, {

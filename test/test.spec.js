@@ -1,6 +1,6 @@
 "use strict";
 var app = require('./server');
-var bat_1 = require('../lib/bat');
+var bat_1 = require('../dist/lib/bat');
 var util = require('util');
 var instance = new bat_1.Bat({
     file: __dirname + '/valid-specs/test-1.spec.yml'

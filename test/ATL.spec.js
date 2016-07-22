@@ -1,5 +1,5 @@
 "use strict";
-var ATLHelpers = require('./../lib/ATLHelpers');
+var ATLHelpers = require('./../dist/lib/ATLHelpers');
 var expect = require('expect');
 var Pointer = ATLHelpers.pointerLib.Pointer;
 /*

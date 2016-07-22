@@ -1,1 +1,6 @@
-{}
+{
+  "dependencies": {
+    "raml-1-parser": "npm:raml-1-parser",
+    "yaml-ast-parser": "npm:yaml-ast-parser"
+  }
+}

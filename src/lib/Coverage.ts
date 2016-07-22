@@ -5,10 +5,8 @@ import url = require('url');
 import util = require('util');
 
 // NPM
-import jsYaml = require('js-yaml');
 import _ = require('lodash');
 import request = require('supertest');
-import expect = require('expect');
 import RAML = require('raml-1-parser');
 const jsonschema = require('jsonschema');
 const pathMatch = require('raml-path-match');

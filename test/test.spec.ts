@@ -1,6 +1,6 @@
 const app = require('./server');
-import {Bat} from '../lib/bat';
-import ATLHelpers = require('../lib/ATLHelpers');
+import {Bat} from '../dist/lib/bat';
+import ATLHelpers = require('../dist/lib/ATLHelpers');
 import util = require('util');
 
 

@@ -1,6 +1,6 @@
-import {ATL, IATLOptions} from './../lib/ATL';
-import ATLHelpers = require('./../lib/ATLHelpers');
-import expect = require('expect');
+import {ATL, IATLOptions} from './../dist/lib/ATL';
+import ATLHelpers = require('./../dist/lib/ATLHelpers');
+const expect = require('expect');
 
 const Pointer = ATLHelpers.pointerLib.Pointer;
 declare var describe, it;

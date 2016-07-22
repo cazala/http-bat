@@ -1,6 +1,6 @@
 "use strict";
-var bat_1 = require('../lib/bat');
-var YAML = require('../lib/YAML');
+var bat_1 = require('../dist/lib/bat');
+var YAML = require('../dist/lib/YAML');
 var glob = require('glob');
 var foundFiles = glob.sync('invalid-specs/**/*.yml', {
     nodir: true,

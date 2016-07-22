@@ -1,5 +1,5 @@
 "use strict";
-var YAML = require('../lib/YAML');
+var YAML = require('../dist/lib/YAML');
 var util = require('util');
 describe('parse KVO', function () {
     it('must fail on scalar sequence', function () {

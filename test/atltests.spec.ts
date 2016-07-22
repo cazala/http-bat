@@ -1,6 +1,6 @@
 declare var describe, it;
 
-import { ATLTest } from '../lib/ATLHelpers';
+import { ATLTest } from '../dist/lib/ATLHelpers';
 
 // import { express } from 'express';
 /*

@@ -1,4 +1,4 @@
-import YAML = require('../lib/YAML');
+import YAML = require('../dist/lib/YAML');
 import util = require('util');
 
 declare var describe, it;
