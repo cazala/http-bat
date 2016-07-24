@@ -1,8 +1,10 @@
+/// <reference path="../src/typings/index.d.ts" />
 "use strict";
 var app = require('./server');
-var bat_1 = require('../dist/lib/bat');
+var dist_1 = require('../dist');
 var util = require('util');
-var instance = new bat_1.Bat({
+var registerMochaSuites = require('../dist/adapters/mocha');
+var instance = new dist_1.Bat({
     file: __dirname + '/valid-specs/test-1.spec.yml'
 });
 describe('HTTP CALLS', function () {
@@ -90,8 +92,7 @@ describe('HTTP CALLS', function () {
         .keys(instance.atl.suites)
         .map(function (key) { return instance.atl.suites[key]; })
         .forEach(suiteHandler);
-    var registerMochaSuites = require('../lib/adapters/mocha').registerMochaSuites;
-    registerMochaSuites(instance);
+    registerMochaSuites.registerMochaSuites(instance);
     instance.run(app)
         .then(function (error) {
         console.error(error);

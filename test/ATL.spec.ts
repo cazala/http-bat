@@ -1,6 +1,7 @@
+/// <reference path="../src/typings/index.d.ts" />
 import {ATL, IATLOptions} from './../dist/lib/ATL';
 import ATLHelpers = require('./../dist/lib/ATLHelpers');
-const expect = require('expect');
+import expect from 'expect';
 
 const Pointer = ATLHelpers.pointerLib.Pointer;
 declare var describe, it;

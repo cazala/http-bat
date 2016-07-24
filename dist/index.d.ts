@@ -1,6 +1,6 @@
-import { ATL } from './ATL';
-import ATLHelpers = require('./ATLHelpers');
-import { RAMLCoverage } from './Coverage';
+import { ATL } from './lib/ATL';
+import ATLHelpers = require('./lib/ATLHelpers');
+import { RAMLCoverage } from './lib/Coverage';
 export interface IBatOptions {
     baseUri?: string;
     variables?: ATLHelpers.IDictionary<any>;
@@ -23,3 +23,4 @@ export declare class Bat {
     }[]>;
     allTests(): ATLHelpers.ATLTest[];
 }
+export default Bat;

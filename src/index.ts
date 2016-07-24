@@ -14,15 +14,15 @@ const pathMatch = require('raml-path-match');
 
 
 // Locals
-import { ATL } from './ATL';
-import ATLHelpers = require('./ATLHelpers');
+import { ATL } from './lib/ATL';
+import ATLHelpers = require('./lib/ATLHelpers');
 
-import Coverage = require('./Coverage');
-import { generateString as coverageToString } from '../lib/RAMLCoverageReporter';
-import { ATLError, CommonAssertions } from './ATLAssertion';
-import YAML = require('./YAML');
+import Coverage = require('./lib/Coverage');
+import { generateString as coverageToString } from './lib/RAMLCoverageReporter';
+import { ATLError, CommonAssertions } from './lib/ATLAssertion';
+import YAML = require('./lib/YAML');
 
-import { RAMLCoverage } from './Coverage';
+import { RAMLCoverage } from './lib/Coverage';
 
 
 export interface IBatOptions {
@@ -165,3 +165,5 @@ export class Bat {
     return this.atl.allTests();
   }
 }
+
+export default Bat;

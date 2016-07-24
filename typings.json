@@ -2,10 +2,14 @@
   "name": "http-bat",
   "version": false,
   "dependencies": {
-    "es6-promise": "registry:npm/es6-promise#3.0.0+20160211003958",
-    "lodash": "registry:npm/lodash#4.0.0+20160701205107"
+    "es6-promise": "registry:npm/es6-promise#3.0.0+20160723033700",
+    "lodash": "registry:npm/lodash#4.0.0+20160723033700"
   },
   "globalDependencies": {
-    "node": "github:borisyankov/DefinitelyTyped/node/node.d.ts#b37afda34daa6186c3f143609555fcd6d70b249f"
-  }
+    "expect": "registry:dt/expect#1.13.4+20160316155526",
+    "node": "registry:env/node#6.0.0+20160723033700",
+    "superagent": "registry:dt/superagent#1.4.0+20160724070541",
+    "supertest": "registry:dt/supertest#1.1.0+20160724070541"
+  },
+  "resolution": "src/typings"
 }

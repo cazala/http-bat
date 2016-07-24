@@ -13,10 +13,8 @@
     },
     "exclude": [
         "node_modules",
-        "typings/browser",
-        "typings/browser.d.ts",
-        "typings/main",
-        "typings/main.d.ts",
+        "src/typings/global",
+        "src/typings/global.d.ts",
         "test",
         "dist"
     ]

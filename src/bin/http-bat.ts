@@ -10,10 +10,10 @@ const glob = require('glob');
 const Mocha = require('mocha');
 
 // LOCALS
-import { Bat } from '../lib/bat';
+import { Bat } from '../index';
 import YAML = require('../lib/YAML');
 import { CoverageData, GlobalCoverageDataCollector } from '../lib/Coverage';
-import httpBatMochaAdapter = require('../lib/adapters/mocha');
+import httpBatMochaAdapter = require('../adapters/mocha');
 import { HTMLCov } from '../lib/RAMLCoverageReporter';
 
 declare var describe, it;

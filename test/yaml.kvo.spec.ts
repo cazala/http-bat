@@ -1,3 +1,5 @@
+/// <reference path="../src/typings/index.d.ts" />
+
 import YAML = require('../dist/lib/YAML');
 import util = require('util');
 

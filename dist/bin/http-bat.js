@@ -5,10 +5,10 @@ const path = require('path');
 const glob = require('glob');
 const Mocha = require('mocha');
 // LOCALS
-const bat_1 = require('../lib/bat');
+const index_1 = require('../index');
 const YAML = require('../lib/YAML');
 const Coverage_1 = require('../lib/Coverage');
-const httpBatMochaAdapter = require('../lib/adapters/mocha');
+const httpBatMochaAdapter = require('../adapters/mocha');
 const RAMLCoverageReporter_1 = require('../lib/RAMLCoverageReporter');
 const pkg = require('../package.json');
 let opts = require('yargs')
@@ -49,7 +49,7 @@ foundFiles.forEach(function (file) {
         describe('Load ' + file, function () {
             let instance;
             this.bail(true);
-            instance = new bat_1.Bat({
+            instance = new index_1.Bat({
                 baseUri: uri
             });
             instances.push(instance);

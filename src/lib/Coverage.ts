@@ -16,7 +16,6 @@ import superAgent = require('superagent');
 import { ATL } from './ATL';
 import ATLHelpers = require('./ATLHelpers');
 import { generateString as coverageToString } from '../lib/RAMLCoverageReporter';
-import { Bat } from './bat';
 
 export interface ITestResult {
   test: ATLHelpers.ATLTest;

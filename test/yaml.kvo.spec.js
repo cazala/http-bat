@@ -1,3 +1,4 @@
+/// <reference path="../src/typings/index.d.ts" />
 "use strict";
 var YAML = require('../dist/lib/YAML');
 var util = require('util');

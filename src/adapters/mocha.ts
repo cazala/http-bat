@@ -2,10 +2,10 @@
 import { inspect } from 'util';
 
 // LOCAL
-import { ATLTest, ATLSuite, flatPromise } from '../ATLHelpers';
-import { ATL } from '../ATL';
-import { Bat } from '../bat';
-import { CoverageResource, CoverageAssertion } from '../Coverage';
+import { ATLTest, ATLSuite, flatPromise } from '../lib/ATLHelpers';
+import { ATL } from '../lib/ATL';
+import { Bat } from '../index';
+import { CoverageResource, CoverageAssertion } from '../lib/Coverage';
 
 declare var describe, it;
 

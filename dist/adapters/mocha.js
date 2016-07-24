@@ -2,7 +2,7 @@
 // NODE
 const util_1 = require('util');
 // LOCAL
-const ATLHelpers_1 = require('../ATLHelpers');
+const ATLHelpers_1 = require('../lib/ATLHelpers');
 const stringRepresentation = (x) => util_1.inspect(x, false, 30, true);
 function runSuite(suite) {
     let execFn = suite.skip ? describe.skip : describe;
