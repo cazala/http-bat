@@ -6,6 +6,7 @@ import { ATLTest, ATLSuite, flatPromise } from '../lib/ATLHelpers';
 import { ATL } from '../lib/ATL';
 import { Bat } from '../index';
 import { CoverageResource, CoverageAssertion } from '../lib/Coverage';
+import _ = require('lodash');
 
 declare var describe, it;
 
@@ -56,12 +57,14 @@ function runSuite(suite: ATLSuite): Promise<boolean> {
             done();
           })
           .catch(err => {
+            let response: any = _.get(test, "requester.superAgentResponse");
+            let body = _.get(test, "requester.superAgentResponse.body");
+            let url = _.get(test, "requester.url");
+
             done(new Error("Test failed"
-              + "\nURL = " + stringRepresentation(test.requester.url)
-              + "\nRESPONSE = " + JSON.stringify(
-                test.requester.superAgentResponse, null, 2
-              )
-              + "\BODY = " + stringRepresentation(test.requester.superAgentResponse.body)
+              + (url ? "\nURL = " + stringRepresentation(url) : "")
+              + (response ? "\nRESPONSE = " + stringRepresentation(JSON.parse(JSON.stringify(response, null, 2))) : '')
+              + (body ? ("\nBODY = " + stringRepresentation(body)) : '')
             ));
           });
       });

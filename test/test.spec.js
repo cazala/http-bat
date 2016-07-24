@@ -1,75 +1,73 @@
-/// <reference path="../src/typings/index.d.ts" />
+/// <reference path="typings/index.d.ts" />
 "use strict";
-var app = require('./server');
-var dist_1 = require('../dist');
-var util = require('util');
-var registerMochaSuites = require('../dist/adapters/mocha');
-var instance = new dist_1.Bat({
+const app = require('./server');
+const dist_1 = require('../dist');
+const util = require('util');
+const registerMochaSuites = require('../dist/adapters/mocha');
+const instance = new dist_1.Bat({
     file: __dirname + '/valid-specs/test-1.spec.yml'
 });
 describe('HTTP CALLS', function () {
-    var promiseColor = function (prom) {
-        var res = util.inspect(prom);
+    const promiseColor = prom => {
+        let res = util.inspect(prom);
         if (res == 'Promise { <pending> }') {
             return "\x1b[35m";
         }
         if (res.indexOf('Promise { <rejec') == 0) {
-            var isCanceled = res.indexOf('CANCELED') != -1;
+            let isCanceled = res.indexOf('CANCELED') != -1;
             return isCanceled ? "\x1b[34m" : "\x1b[31m";
         }
         return "\x1b[32m";
     };
-    var printPromise = function (prom) {
-        var color = promiseColor(prom);
-        var res = util.inspect(prom);
+    const printPromise = prom => {
+        let color = promiseColor(prom);
+        let res = util.inspect(prom);
         if (res == 'Promise { <pending> }') {
             return promiseColor(prom) + "PENDING \x1b[0m";
         }
         if (res.indexOf('Promise { <rejec') == 0) {
-            var isCanceled = res.indexOf('CANCELED') != -1;
+            let isCanceled = res.indexOf('CANCELED') != -1;
             return promiseColor(prom) + (isCanceled ? 'CANCELED' : 'REJECTED') + " \x1b[0m";
         }
         return promiseColor(prom) + "RESOLVED \x1b[0m";
     };
-    var printPromises = function (suite, p) {
+    const printPromises = (suite, p) => {
         p += promiseColor(suite.promise);
         console.log(p);
         console.log(p + suite.name, printPromise(suite.promise) + (suite.skip ? ' [SKIPPED]' : ''));
         p += "┃\x1b[0m";
         if (suite.test) {
-            var head = p + '  ' + promiseColor(suite.test.promise) + '┃\x1b[0m';
+            let head = p + '  ' + promiseColor(suite.test.promise) + '┃\x1b[0m';
             console.log(p + promiseColor(suite.test.promise) + '  TEST: ' + (suite.test.skip ? ' [SKIPPED]' : ''), suite.test.promise);
             console.log(head + promiseColor(suite.test.requester.promise) + '  REQUEST:', printPromise(suite.test.requester.promise));
-            var head1_1 = head + '  ' + promiseColor(suite.test.requester.promise) + '┃\x1b[0m';
-            suite.test.assertions.forEach(function (ass) {
-                console.log(head1_1 + '  ' + printPromise(ass.promise) + ' ' + ass.name);
+            let head1 = head + '  ' + promiseColor(suite.test.requester.promise) + '┃\x1b[0m';
+            suite.test.assertions.forEach(ass => {
+                console.log(head1 + '  ' + printPromise(ass.promise) + ' ' + ass.name);
             });
-            suite.test.assertions.length && console.log(head1_1 + '____');
+            suite.test.assertions.length && console.log(head1 + '____');
             suite.test.assertions.length && console.log(head + '____');
         }
         if (suite.suites) {
-            Object.keys(suite.suites).forEach(function (key) {
+            Object.keys(suite.suites).forEach(key => {
                 printPromises(suite.suites[key], p + '  ');
             });
         }
         console.log(p + '____');
     };
-    var printAll = function () {
+    const printAll = () => {
         console.log(new Array(200).join('@') + '\x1B[2J\x1B[0f');
         Object
             .keys(instance.atl.suites)
-            .map(function (key) {
-            return printPromises(instance.atl.suites[key], '  ');
-        });
+            .map(key => printPromises(instance.atl.suites[key], '  '));
     };
-    var suiteHandler = function (suite) {
+    const suiteHandler = (suite) => {
         describe(suite.name, function () {
             it(suite.async ? 'is ASYNC' : 'is SYNC');
-            describe('depends on', function () {
-                suite.dependsOn.forEach(function (dep) {
-                    it(dep.name, function (done) {
-                        dep.promise.then(function () { done(); });
-                        dep.promise.catch(function (err) { done(err); });
+            describe('depends on', () => {
+                suite.dependsOn.forEach(dep => {
+                    it(dep.name, (done) => {
+                        dep.promise.then(() => { done(); });
+                        dep.promise.catch(err => { done(err); });
                     });
                 });
             });
@@ -77,20 +75,20 @@ describe('HTTP CALLS', function () {
             suite.skip && it('is skipped');
             if (suite.test && !suite.skip) {
                 it('is a test', function (done) {
-                    suite.test.promise.then(function () { done(); });
-                    suite.test.promise.catch(function (err) { done(err); });
+                    suite.test.promise.then(() => { done(); });
+                    suite.test.promise.catch(err => { done(err); });
                 });
             }
             it('must pass', function (done) {
-                suite.promise.then(function () { done(); });
-                suite.promise.catch(function (err) { done(err); });
+                suite.promise.then(() => { done(); });
+                suite.promise.catch(err => { done(err); });
             });
         });
     };
     printAll();
     Object
         .keys(instance.atl.suites)
-        .map(function (key) { return instance.atl.suites[key]; })
+        .map(key => instance.atl.suites[key])
         .forEach(suiteHandler);
     registerMochaSuites.registerMochaSuites(instance);
     instance.run(app)

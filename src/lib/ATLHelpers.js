@@ -1,32 +1,25 @@
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
 // NODE
-var util = require('util');
+const util = require('util');
 // NPM
-var methods = require('methods');
+const methods = require('methods');
 exports.pointerLib = require('./Pointer');
-var ATLAssertion_1 = require('./ATLAssertion');
-var ATLRequest_1 = require('./ATLRequest');
-var YAML_1 = require('./YAML');
+const ATLAssertion_1 = require('./ATLAssertion');
+const ATLRequest_1 = require('./ATLRequest');
+const YAML_1 = require('./YAML');
 /// ---
-var CanceledError = (function (_super) {
-    __extends(CanceledError, _super);
-    function CanceledError() {
-        _super.call(this, 'CANCELED');
+class CanceledError extends Error {
+    constructor() {
+        super('CANCELED');
     }
-    CanceledError.prototype.inspect = function () {
+    inspect() {
         return 'CANCELED';
-    };
-    return CanceledError;
-}(Error));
+    }
+}
 exports.CanceledError = CanceledError;
 /// ---
-var ATLSuite = (function () {
-    function ATLSuite(name) {
+class ATLSuite {
+    constructor(name) {
         this.name = name;
         this.dependsOn = [];
         this.suites = null;
@@ -37,36 +30,35 @@ var ATLSuite = (function () {
         this.flatPromise = flatPromise();
         this.promise = this.flatPromise.promise;
     }
-    ATLSuite.prototype.run = function () {
-        var _this = this;
-        var mutex = this.dependsOn.length ? Promise.all(this.dependsOn.map(function (x) { return x.promise; })) : Promise.resolve();
-        mutex.then(function () {
-            if (_this.test) {
-                var innerRun = _this.test.run();
-                innerRun.then(function () { return _this.flatPromise.resolver(); });
-                innerRun.catch(function (err) { return _this.reject(err); });
+    run() {
+        let mutex = this.dependsOn.length ? Promise.all(this.dependsOn.map(x => x.promise)) : Promise.resolve();
+        mutex.then(() => {
+            if (this.test) {
+                let innerRun = this.test.run();
+                innerRun.then(() => this.flatPromise.resolver());
+                innerRun.catch(err => this.reject(err));
             }
-            else if (_this.suites) {
-                if (!_this.suites.length) {
-                    _this.flatPromise.resolver();
+            else if (this.suites) {
+                if (!this.suites.length) {
+                    this.flatPromise.resolver();
                 }
                 else {
-                    var innerMutex = Promise.all(_this.suites.map(function (x) { return x.run(); }));
-                    innerMutex.then(function () { return _this.flatPromise.resolver(); });
-                    innerMutex.catch(function (err) {
-                        _this.reject(err);
+                    let innerMutex = Promise.all(this.suites.map(x => x.run()));
+                    innerMutex.then(() => this.flatPromise.resolver());
+                    innerMutex.catch(err => {
+                        this.reject(err);
                     });
                 }
             }
             else
-                _this.flatPromise.rejecter(new Error('Invalid suite. No tests and no sub suites found. ' + _this.name));
+                this.flatPromise.rejecter(new Error('Invalid suite. No tests and no sub suites found. ' + this.name));
         });
-        mutex.catch(function (err) {
-            _this.reject(err);
+        mutex.catch(err => {
+            this.reject(err);
         });
         return this.promise;
-    };
-    ATLSuite.prototype.reject = function (error) {
+    }
+    reject(error) {
         if (this.skip && error instanceof Error) {
             this.flatPromise.resolver();
         }
@@ -74,20 +66,18 @@ var ATLSuite = (function () {
             this.flatPromise.rejecter(error);
         }
         this.cancel(error);
-    };
-    ATLSuite.prototype.cancel = function (err) {
+    }
+    cancel(err) {
         this.flatPromise.rejecter(err);
         if (this.test)
             this.test.cancel(err);
         if (this.suites && this.suites.length)
-            this.suites.forEach(function (x) { return x.cancel(err); });
-    };
-    return ATLSuite;
-}());
+            this.suites.forEach(x => x.cancel(err));
+    }
+}
 exports.ATLSuite = ATLSuite;
-var ATLTest = (function () {
-    function ATLTest() {
-        var _this = this;
+class ATLTest {
+    constructor() {
         this.skip = false;
         this.timeout = 30000;
         this.response = {};
@@ -97,45 +87,44 @@ var ATLTest = (function () {
         this.requester = new ATLRequest_1.ATLRequest(this);
         this.assertions = [];
         this.requester.promise
-            .catch(function (x) { return _this.flatPromise.rejecter(x); });
+            .catch(x => this.flatPromise.rejecter(x));
     }
-    ATLTest.prototype.run = function () {
-        var _this = this;
+    run() {
         if (this.skip) {
             this.flatPromise.resolver();
             return this.promise;
         }
         if (!this.assertions.length) {
             this.requester.promise
-                .then(function (x) { return _this.flatPromise.resolver(); });
+                .then(x => this.flatPromise.resolver());
         }
         else {
-            var assertionResults = Promise.all(this.assertions.map(function (x) { return x.promise; }));
+            let assertionResults = Promise.all(this.assertions.map(x => x.promise));
             assertionResults
-                .then(function (assertionResults) {
-                var errors = assertionResults.filter(function (x) { return !!x; });
+                .then(assertionResults => {
+                let errors = assertionResults.filter(x => !!x);
                 if (errors.length) {
-                    _this.flatPromise.rejecter(errors);
+                    this.flatPromise.rejecter(errors);
                 }
                 else {
-                    _this.flatPromise.resolver();
+                    this.flatPromise.resolver();
                 }
             });
             assertionResults
-                .catch(function (errors) {
-                _this.flatPromise.rejecter(errors);
+                .catch(errors => {
+                this.flatPromise.rejecter(errors);
             });
         }
         this.requester.run();
         return this.promise;
-    };
-    ATLTest.prototype.cancel = function (err) {
+    }
+    cancel(err) {
         try {
             this.flatPromise.rejecter(err);
         }
         catch (e) {
         }
-        this.assertions.forEach(function (x) {
+        this.assertions.forEach(x => {
             try {
                 x.cancel();
             }
@@ -145,32 +134,31 @@ var ATLTest = (function () {
             this.requester.cancel();
         }
         catch (e) { }
-    };
-    return ATLTest;
-}());
+    }
+}
 exports.ATLTest = ATLTest;
 /// ---
-var interpreteSuite = {
-    skip: function (suite, node) {
+const interpreteSuite = {
+    skip(suite, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Boolean)) {
-            var skip = YAML_1.YAMLAstHelpers.readScalar(node);
+            let skip = YAML_1.YAMLAstHelpers.readScalar(node);
             suite.skip = !!skip;
         }
     },
-    async: function (suite, node) {
+    async(suite, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Boolean)) {
-            var async = YAML_1.YAMLAstHelpers.readScalar(node);
+            let async = YAML_1.YAMLAstHelpers.readScalar(node);
             suite.async = !!async;
         }
     },
-    UNKNOWN: function (suite, node, name) {
-        var method = parseMethodHeader(name);
+    UNKNOWN(suite, node, name) {
+        let method = parseMethodHeader(name);
         if (method) {
             if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
-                if (suite.suites.some(function (x) { return x.name == name; })) {
+                if (suite.suites.some(x => x.name == name)) {
                     throw new YAML_1.NodeError('Duplicated test name: ' + name, node);
                 }
-                var testSuite = new ATLSuite(name);
+                let testSuite = new ATLSuite(name);
                 testSuite.atl = suite.atl;
                 testSuite.descriptor = YAML_1.YAMLAstHelpers.toObject(node);
                 testSuite.test = parseTest(node, suite);
@@ -190,79 +178,79 @@ var interpreteSuite = {
         }
     }
 };
-var interpreteTest = {
-    uriParameters: function (suite, test, node) {
+const interpreteTest = {
+    uriParameters(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
             test.uriParameters = {};
-            var object_1 = YAML_1.YAMLAstHelpers.getMap(node);
-            var keys = Object.keys(object_1);
-            keys.forEach(function (key) {
-                var val = YAML_1.YAMLAstHelpers.readScalar(object_1[key]) || object_1[key];
+            let object = YAML_1.YAMLAstHelpers.getMap(node);
+            let keys = Object.keys(object);
+            keys.forEach(key => {
+                let val = YAML_1.YAMLAstHelpers.readScalar(object[key]) || object[key];
                 ensureInstanceOf("uriParameters." + key, val, Number, String, exports.pointerLib.Pointer);
                 test.uriParameters[key] = val;
             });
         }
     },
-    description: function (suite, test, node) {
+    description(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, String)) {
-            var description = YAML_1.YAMLAstHelpers.readScalar(node);
+            let description = YAML_1.YAMLAstHelpers.readScalar(node);
             ensureInstanceOf("description", description, String);
             if (description.trim().length > 0) {
                 test.description = description;
             }
         }
     },
-    id: function (suite, test, node) {
+    id(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, String, Number)) {
-            var id = YAML_1.YAMLAstHelpers.readScalar(node);
+            let id = YAML_1.YAMLAstHelpers.readScalar(node);
             test.testId = id.toString();
         }
     },
-    timeout: function (suite, test, node) {
+    timeout(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Number)) {
-            var value = YAML_1.YAMLAstHelpers.readScalar(node);
+            let value = YAML_1.YAMLAstHelpers.readScalar(node);
             ensureInstanceOf("timeout", value, Number);
             if (value <= 0)
                 throw new YAML_1.NodeError("timeout must be a number > 0", node);
             test.timeout = value;
         }
     },
-    queryParameters: function (suite, test, node) {
+    queryParameters(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
             test.request.queryParameters = test.request.queryParameters || {};
-            var object_2 = YAML_1.YAMLAstHelpers.getMap(node);
-            var keys = Object.keys(object_2);
-            keys.forEach(function (key) {
-                var val = YAML_1.YAMLAstHelpers.readScalar(object_2[key]) || object_2[key];
+            let object = YAML_1.YAMLAstHelpers.getMap(node);
+            let keys = Object.keys(object);
+            keys.forEach(key => {
+                let val = YAML_1.YAMLAstHelpers.readScalar(object[key]) || object[key];
                 ensureInstanceOf("queryParameters." + key, val, Number, String, Boolean, exports.pointerLib.Pointer);
                 test.request.queryParameters[key] = val;
             });
         }
     },
-    headers: function (suite, test, node) {
+    headers(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
-            var object_3 = YAML_1.YAMLAstHelpers.getMap(node);
-            var keys = Object.keys(object_3);
-            keys.forEach(function (key) {
-                var val = YAML_1.YAMLAstHelpers.readScalar(object_3[key]) || object_3[key];
+            let object = YAML_1.YAMLAstHelpers.getMap(node);
+            let keys = Object.keys(object);
+            keys.forEach(key => {
+                let val = YAML_1.YAMLAstHelpers.readScalar(object[key]) || object[key];
                 ensureInstanceOf("headers." + key, val, String, exports.pointerLib.Pointer);
                 test.request.headers[key.toLowerCase()] = val;
             });
         }
     },
-    request: function (suite, test, node) {
+    request(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
             parseRequest(test, node);
         }
     },
-    response: function (suite, test, node) {
+    response(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
             parseResponse(test, node);
         }
     },
-    skip: function (suite, test, node) {
+    skip(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Boolean)) {
-            var id = YAML_1.YAMLAstHelpers.readScalar(node);
+            let id = YAML_1.YAMLAstHelpers.readScalar(node);
             test.skip = !!id;
             if (test.skip) {
                 test.requester.cancel();
@@ -271,24 +259,24 @@ var interpreteTest = {
     }
 };
 function parseSuites(sequenceName, node, instance) {
-    var suite = new ATLSuite(sequenceName);
+    let suite = new ATLSuite(sequenceName);
     suite.atl = instance;
     suite.suites = [];
     YAML_1.YAMLAstHelpers.iterpretMap(node, interpreteSuite, false, suite);
     if (suite.skip) {
         // skips all the inner suites and tests
-        var recursiveSkip_1 = function (suite) {
+        const recursiveSkip = (suite) => {
             suite.skip = true;
-            suite.suites && suite.suites.forEach(recursiveSkip_1);
+            suite.suites && suite.suites.forEach(recursiveSkip);
             suite.test && (suite.test.skip = true);
         };
-        recursiveSkip_1(suite);
+        recursiveSkip(suite);
     }
     return suite;
 }
 exports.parseSuites = parseSuites;
 function parseTest(node, suite) {
-    var test = new ATLTest;
+    let test = new ATLTest;
     test.suite = suite;
     test.lowLevelNode = node;
     test.request.headers = test.request.headers || {};
@@ -300,23 +288,23 @@ function parseTest(node, suite) {
     return test;
 }
 exports.parseTest = parseTest;
-var interpreteRequest = {
-    json: function (suite, test, node) {
-        var value = YAML_1.YAMLAstHelpers.toObject(node);
+const interpreteRequest = {
+    json(suite, test, node) {
+        let value = YAML_1.YAMLAstHelpers.toObject(node);
         test.request.json = value;
     },
-    attach: function (suite, test, node) {
-        var value = YAML_1.YAMLAstHelpers.readKVOElems(node);
+    attach(suite, test, node) {
+        let value = YAML_1.YAMLAstHelpers.readKVOElems(node);
         test.request.attach = [];
-        value.forEach(function (kvo) {
+        value.forEach(kvo => {
             if (typeof kvo.value != "string")
                 new YAML_1.NodeError("request.attach.* must be a path", node);
             else
                 test.request.attach.push(kvo);
         });
     },
-    form: function (suite, test, node) {
-        var value = YAML_1.YAMLAstHelpers.readKVOElems(node);
+    form(suite, test, node) {
+        let value = YAML_1.YAMLAstHelpers.readKVOElems(node);
         if (!('content-type' in test.request.headers)) {
             test.request.headers['content-type'] = "multipart/form-data";
         }
@@ -326,8 +314,8 @@ var interpreteRequest = {
         }
         test.request.form = value;
     },
-    urlencoded: function (suite, test, node) {
-        var value = YAML_1.YAMLAstHelpers.readKVOElems(node);
+    urlencoded(suite, test, node) {
+        let value = YAML_1.YAMLAstHelpers.readKVOElems(node);
         if (!('content-type' in test.request.headers)) {
             test.request.headers['content-type'] = "application/x-www-form-urlencoded";
         }
@@ -337,23 +325,22 @@ var interpreteRequest = {
         test.request.urlencoded = value;
     }
 };
-var interpreteResponse = (_a = {
-        headers: function (suite, test, node) {
-            if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
-                var value_1 = YAML_1.YAMLAstHelpers.toObject(node);
-                test.response.headers = test.response.headers || {};
-                var keys = Object.keys(value_1);
-                keys.forEach(function (key) {
-                    var val = value_1[key];
-                    ensureInstanceOf("response.headers." + key, val, String, exports.pointerLib.Pointer);
-                    test.response.headers[key.toLowerCase()] = val;
-                });
-            }
+const interpreteResponse = {
+    headers(suite, test, node) {
+        if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+            let value = YAML_1.YAMLAstHelpers.toObject(node);
+            test.response.headers = test.response.headers || {};
+            let keys = Object.keys(value);
+            keys.forEach(key => {
+                let val = value[key];
+                ensureInstanceOf("response.headers." + key, val, String, exports.pointerLib.Pointer);
+                test.response.headers[key.toLowerCase()] = val;
+            });
         }
     },
-    _a['content-type'] = function (suite, test, node) {
+    ['content-type'](suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, String)) {
-            var value = YAML_1.YAMLAstHelpers.readScalar(node);
+            let value = YAML_1.YAMLAstHelpers.readScalar(node);
             test.response.headers = test.response.headers || {};
             if ('content-type' in test.response.headers) {
                 new YAML_1.NodeError("response.content-type alredy registered as request.header.content-type You can not use BOTH", node);
@@ -362,41 +349,40 @@ var interpreteResponse = (_a = {
             test.response.headers['content-type'] = value;
         }
     },
-    _a.status = function (suite, test, node) {
+    status(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Number)) {
-            var value = YAML_1.YAMLAstHelpers.readScalar(node);
+            let value = YAML_1.YAMLAstHelpers.readScalar(node);
             test.response.status = parseInt(value) | 0;
         }
     },
-    _a.print = function (suite, test, node) {
+    print(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Boolean)) {
-            var value = YAML_1.YAMLAstHelpers.readScalar(node);
+            let value = YAML_1.YAMLAstHelpers.readScalar(node);
             test.response.print = !!value;
         }
     },
-    _a.body = function (suite, test, node) {
+    body(suite, test, node) {
         parseResponseBody(test, node);
-    },
-    _a
-);
-var interpreteResponseBody = (_b = {},
-    _b['is'] = function (suite, test, node) {
-        var value = YAML_1.YAMLAstHelpers.toObject(node);
+    }
+};
+const interpreteResponseBody = {
+    ['is'](suite, test, node) {
+        let value = YAML_1.YAMLAstHelpers.toObject(node);
         test.response.body.is = value;
     },
-    _b.matches = function (suite, test, node) {
-        var value = YAML_1.YAMLAstHelpers.readKVOElems(node);
+    matches(suite, test, node) {
+        let value = YAML_1.YAMLAstHelpers.readKVOElems(node);
         test.response.body.matches = value;
     },
-    _b.schema = function (suite, test, node) {
+    schema(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, String)) {
-            var value = YAML_1.YAMLAstHelpers.readScalar(node);
+            let value = YAML_1.YAMLAstHelpers.readScalar(node);
             test.response.body.schema = value;
         }
     },
-    _b.take = function (suite, test, node) {
+    take(suite, test, node) {
         if (YAML_1.YAMLAstHelpers.isSeq(node)) {
-            var value = YAML_1.YAMLAstHelpers.readKVOElems(node);
+            let value = YAML_1.YAMLAstHelpers.readKVOElems(node);
             test.response.body.take = [];
             value.forEach(function (takenElement) {
                 if (!(takenElement.value instanceof exports.pointerLib.Pointer))
@@ -407,7 +393,7 @@ var interpreteResponseBody = (_b = {},
         }
         else {
             /* istanbul ignore else */
-            var value = YAML_1.YAMLAstHelpers.toObject(node);
+            let value = YAML_1.YAMLAstHelpers.toObject(node);
             if (value instanceof exports.pointerLib.Pointer) {
                 test.response.body.copyTo = value;
             }
@@ -416,13 +402,12 @@ var interpreteResponseBody = (_b = {},
             }
         }
     },
-    _b.print = function (suite, test, node) {
-        var value = YAML_1.YAMLAstHelpers.readScalar(node);
+    print(suite, test, node) {
+        let value = YAML_1.YAMLAstHelpers.readScalar(node);
         ensureInstanceOf("response.body.print", value, Boolean);
         test.response.body.print = value;
-    },
-    _b
-);
+    }
+};
 function parseRequest(test, node) {
     test.request.lowLevelNode = node;
     if (YAML_1.YAMLAstHelpers.isMap(node)) {
@@ -451,12 +436,8 @@ function parseResponseBody(test, responseBody) {
         new YAML_1.NodeError("response.body must be a map", responseBody);
     }
 }
-function ensureInstanceOf(name, value) {
-    var types = [];
-    for (var _i = 2; _i < arguments.length; _i++) {
-        types[_i - 2] = arguments[_i];
-    }
-    for (var i = 0; i < types.length; i++) {
+function ensureInstanceOf(name, value, ...types) {
+    for (let i = 0; i < types.length; i++) {
         if (typeof types[i] == "function") {
             if (types[i] === Object && typeof value != "object")
                 continue;
@@ -475,12 +456,12 @@ function ensureInstanceOf(name, value) {
             }
         }
     }
-    throw new TypeError(name + " must be instance of " + types.map(function (x) { return x && x.displayName || x && x.name || x.toString(); }).join(" | ") + " got " + util.inspect(value));
+    throw new TypeError(name + " must be instance of " + types.map((x) => x && x.displayName || x && x.name || x.toString()).join(" | ") + " got " + util.inspect(value));
 }
 exports.ensureInstanceOf = ensureInstanceOf;
 function parseMethodHeader(name) {
-    var parts = name.split(/\s+/g);
-    var method = null;
+    let parts = name.split(/\s+/g);
+    let method = null;
     method = parts[0].trim().toLowerCase();
     if (method.length == 0)
         return null;
@@ -526,11 +507,11 @@ function cloneObject(obj, store) {
     }
     // Handle Array (return a full slice of the array)
     if (obj instanceof Array) {
-        var newArray = obj.slice();
-        return newArray.map(function (x) { return cloneObject(x, store); });
+        let newArray = obj.slice();
+        return newArray.map(x => cloneObject(x, store));
     }
     if (obj instanceof exports.pointerLib.Pointer) {
-        var result = void 0;
+        let result;
         try {
             result = cloneObject(obj.get(store), store);
         }
@@ -544,8 +525,8 @@ function cloneObject(obj, store) {
     }
     // Handle Object
     if (obj instanceof Object) {
-        var copy = new obj.constructor();
-        for (var attr in obj) {
+        let copy = new obj.constructor();
+        for (let attr in obj) {
             if (obj.hasOwnProperty(attr)) {
                 copy[attr] = cloneObject(obj[attr], store);
             }
@@ -555,12 +536,12 @@ function cloneObject(obj, store) {
     throw new Error("Unable to copy obj! Its type isn't supported. " + util.inspect(obj));
 }
 function flatPromise() {
-    var result = {
+    let result = {
         resolver: null,
         rejecter: null,
         promise: null
     };
-    result.promise = new Promise(function (a, b) {
+    result.promise = new Promise((a, b) => {
         result.resolver = a;
         result.rejecter = function (x) {
             b(x);
@@ -571,7 +552,7 @@ function flatPromise() {
 }
 exports.flatPromise = flatPromise;
 function errorDiff(msg, expected, actual, ctx) {
-    var err = new Error(msg);
+    let err = new Error(msg);
     if (ctx) {
         err.message = null;
         err.inspect = function () {
@@ -586,7 +567,7 @@ function errorDiff(msg, expected, actual, ctx) {
 }
 exports.errorDiff = errorDiff;
 function error(msg, ctx) {
-    var err = new Error(msg);
+    let err = new Error(msg);
     if (ctx) {
         err.message = null;
         err.inspect = function () {
@@ -616,17 +597,17 @@ function generateTestAssertions(test) {
                 test.assertions.push(new ATLAssertion_1.CommonAssertions.ValidateSchemaOperation(test, test.response.body.schema));
             }
             if (test.response.body.matches) {
-                test.response.body.matches.forEach(function (kvo) {
+                test.response.body.matches.forEach(kvo => {
                     test.assertions.push(new ATLAssertion_1.CommonAssertions.BodyMatchesAssertion(test, kvo.key, kvo.value));
                 });
             }
             if (test.response.headers) {
-                for (var h in test.response.headers) {
+                for (let h in test.response.headers) {
                     test.assertions.push(new ATLAssertion_1.CommonAssertions.HeaderMatchesAssertion(test, h, test.response.headers[h]));
                 }
             }
             if (test.response.body.take) {
-                var take = test.response.body.take;
+                let take = test.response.body.take;
                 take.forEach(function (takenElement) {
                     test.assertions.push(new ATLAssertion_1.CommonAssertions.CopyBodyValueOperation(test, takenElement.key, takenElement.value));
                 });
@@ -637,5 +618,4 @@ function generateTestAssertions(test) {
         }
     }
 }
-var _a, _b;
 //# sourceMappingURL=ATLHelpers.js.map

@@ -97,12 +97,13 @@ var CommonAssertions;
             this.name = "response.status == " + statusCode;
         }
         validate(response) {
-            if (response.status != this.statusCode)
+            if (response.status != this.statusCode) {
                 this.error({
                     message: 'expected status code {expected} got {actual} instead',
                     expected: this.statusCode,
                     actual: response.status
                 });
+            }
         }
     }
     CommonAssertions.StatusCodeAssertion = StatusCodeAssertion;

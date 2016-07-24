@@ -1,8 +1,7 @@
-/// <reference path="../src/typings/index.d.ts" />
+/// <reference path="typings/index.d.ts" />
 
 const app = require('./server');
-import {Bat} from '../dist';
-import ATLHelpers = require('../dist/lib/ATLHelpers');
+import { Bat, ATLHelpers } from '../dist';
 import util = require('util');
 import registerMochaSuites = require('../dist/adapters/mocha');
 

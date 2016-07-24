@@ -1,16 +1,16 @@
 "use strict";
-var util = require('util');
-var ATLHelpers = require('./ATLHelpers');
-var _ = require('lodash');
-var RAML = require('raml-1-parser');
-var jsonschema = require('jsonschema');
-var YAML_1 = require('./YAML');
-var FileSystem_1 = require('./FileSystem');
-var path = require('path');
+const util = require('util');
+const ATLHelpers = require('./ATLHelpers');
+const _ = require('lodash');
+const RAML = require('raml-1-parser');
+const jsonschema = require('jsonschema');
+const YAML_1 = require('./YAML');
+const FileSystem_1 = require('./FileSystem');
+const path = require('path');
 if (typeof Promise != 'function')
     require('es6-promise').polyfill();
-var ATL = (function () {
-    function ATL(options) {
+class ATL {
+    constructor(options) {
         this.options = {
             variables: {},
             path: null,
@@ -31,33 +31,32 @@ var ATL = (function () {
         if (!this.options.FSResolver)
             this.options.FSResolver = new FileSystem_1.FSResolver(this.options.path);
     }
-    ATL.prototype.allTests = function () {
-        var tests = [];
-        var walk = function (suite) {
+    allTests() {
+        let tests = [];
+        const walk = (suite) => {
             if (suite.test)
                 tests.push(suite.test);
             if (suite.suites && Object.keys(suite.suites).length) {
-                for (var k in suite.suites)
+                for (let k in suite.suites)
                     walk(suite.suites[k]);
             }
         };
-        for (var suite in this.suites)
+        for (let suite in this.suites)
             walk(this.suites[suite]);
         return tests;
-    };
-    ATL.prototype.fromAST = function (astRoot) {
-        var _this = this;
+    }
+    fromAST(astRoot) {
         this.options.variables = this.options.variables || {};
         YAML_1.YAMLAstHelpers.iterpretMap(astRoot, ATL.interprete, true, this);
         // override variables.ENV if not exists or is an object
         if (!this.options.variables['ENV'] || typeof this.options.variables['ENV'] != "object")
             this.options.variables['ENV'] = {};
         _.extend(this.options.variables['ENV'], _.cloneDeep(process.env));
-        this.allTests().forEach(function (x) { return _this.replaceSchema(x); });
-        var requiredSuites = [];
-        var lastSyncSuite = null;
-        var _loop_1 = function(suiteName) {
-            var suite = this_1.suites[suiteName];
+        this.allTests().forEach(x => this.replaceSchema(x));
+        let requiredSuites = [];
+        let lastSyncSuite = null;
+        for (let suiteName in this.suites) {
+            let suite = this.suites[suiteName];
             if (suite.async) {
                 if (lastSyncSuite) {
                     suite.dependsOn.push(lastSyncSuite);
@@ -65,24 +64,18 @@ var ATL = (function () {
                 requiredSuites.push(suite);
             }
             else {
-                requiredSuites.forEach(function (x) {
-                    return suite.dependsOn.push(x);
-                });
+                requiredSuites.forEach(x => suite.dependsOn.push(x));
                 if (lastSyncSuite)
                     suite.dependsOn.push(lastSyncSuite);
                 requiredSuites.length = 0;
                 lastSyncSuite = suite;
             }
-        };
-        var this_1 = this;
-        for (var suiteName in this.suites) {
-            _loop_1(suiteName);
         }
         YAML_1.walkFindingErrors(astRoot, this.errors);
         return;
-    };
-    ATL.prototype.obtainSchemaValidator = function (schema) {
-        var v = new jsonschema.Validator();
+    }
+    obtainSchemaValidator(schema) {
+        let v = new jsonschema.Validator();
         if (typeof schema == "string") {
             if (schema in this.schemas) {
                 v.addSchema(this.schemas[schema], schema);
@@ -105,19 +98,19 @@ var ATL = (function () {
         }
         if (v.unresolvedRefs && v.unresolvedRefs.length) {
             while (v.unresolvedRefs && v.unresolvedRefs.length) {
-                var nextSchema = v.unresolvedRefs.shift();
-                var theSchema = this.schemas[nextSchema];
+                let nextSchema = v.unresolvedRefs.shift();
+                let theSchema = this.schemas[nextSchema];
                 if (!theSchema)
                     throw new Error("schema " + nextSchema + " not found");
                 v.addSchema(theSchema, nextSchema);
             }
         }
-        return function (content) {
+        return (content) => {
             return v.validate(content, schema);
         };
-    };
+    }
     // Matches the schemas of the tests against the schemas of the ATL document
-    ATL.prototype.replaceSchema = function (test) {
+    replaceSchema(test) {
         if (test && test.response.body && test.response.body.schema) {
             if (typeof test.response.body.schema == "string") {
                 if (test.response.body.schema in this.schemas) {
@@ -128,128 +121,132 @@ var ATL = (function () {
                 }
             }
         }
-    };
-    ATL.prototype._addSchema = function (schemaName, schema) {
+    }
+    _addSchema(schemaName, schema) {
         if (schemaName in this.schemas) {
             throw new Error("schemas: duplicated schema " + schemaName);
         }
         this.schemas[schemaName] = schema;
-    };
-    ATL.interprete = {
-        baseUri: function (atl, node) {
-            if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, String)) {
-                var value = YAML_1.YAMLAstHelpers.readScalar(node);
-                atl.options.baseUri = value;
-                if (atl.options.baseUri.substr(-1) === '/') {
-                    atl.options.baseUri = atl.options.baseUri.substr(0, atl.options.baseUri.length - 1);
-                }
+    }
+}
+ATL.interprete = {
+    baseUri(atl, node) {
+        if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, String)) {
+            let value = YAML_1.YAMLAstHelpers.readScalar(node);
+            atl.options.baseUri = value;
+            if (atl.options.baseUri.substr(-1) === '/') {
+                atl.options.baseUri = atl.options.baseUri.substr(0, atl.options.baseUri.length - 1);
             }
-        },
-        raml: function (atl, node) {
-            if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, String)) {
-                var value = YAML_1.YAMLAstHelpers.readScalar(node);
-                try {
-                    atl.raml = RAML.loadApiSync(value, { rejectOnErrors: true, fsResolver: atl.options.FSResolver });
+        }
+    },
+    raml(atl, node) {
+        if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, String)) {
+            let value = YAML_1.YAMLAstHelpers.readScalar(node);
+            try {
+                atl.raml = RAML.loadApiSync(value, { rejectOnErrors: true, fsResolver: atl.options.FSResolver });
+            }
+            catch (e) {
+                if (e.parserErrors) {
+                    throw path.resolve(value) + ':\n' + e.message + "\n" + e.parserErrors.map(x => "  " + x.message + " line " + x.line).join("\n");
                 }
-                catch (e) {
-                    if (e.parserErrors) {
-                        throw path.resolve(value) + ':\n' + e.message + "\n" + e.parserErrors.map(function (x) { return "  " + x.message + " line " + x.line; }).join("\n");
-                    }
-                    else {
-                        console.log(util.inspect(e));
-                    }
-                    throw e;
+                else {
+                    console.log(util.inspect(e));
                 }
+                throw e;
+            }
+            try {
                 // try to get absoluteUriParameters
-                atl.raml.allResources()[0].absoluteUriParameters().map(function (x) { return x; });
-                atl.raml.allBaseUriParameters().map(function (x) { return x; });
-                var schemas = atl.raml.schemas();
-                for (var i in schemas) {
-                    var schemaList = schemas[i].toJSON();
-                    for (var schemaName in schemaList) {
-                        var json = null;
-                        try {
-                            json = JSON.parse(schemaList[schemaName]);
-                            atl._addSchema(schemaName, json);
-                        }
-                        catch (e) {
-                            e.message = 'Error parsing JSON schema ' + schemaName + '\n\t' + e.message + '\n' + util.inspect(schemaList[schemaName]);
-                            throw e;
-                        }
-                    }
-                }
+                atl.raml.allResources()[0].absoluteUriParameters().map(x => x);
+                atl.raml.allBaseUriParameters().map(x => x);
             }
-        },
-        variables: function (atl, node) {
-            if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
-                var value = YAML_1.YAMLAstHelpers.toObject(node);
-                atl.options.variables = _.merge(atl.options.variables || {}, value);
+            catch (e) {
+                new YAML_1.NodeError("raml file must have baseUri", node);
             }
-        },
-        options: function (atl, node) {
-            if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
-                var options_1 = YAML_1.YAMLAstHelpers.toObject(node);
-                Object.keys(options_1).forEach(function (key) {
-                    var value = options_1[key];
-                    switch (key) {
-                        case 'selfSignedCert':
-                            ATLHelpers.ensureInstanceOf("options.selfSignedCert", value, Boolean);
-                            atl.options.selfSignedCert = !!value;
-                            break;
-                        case 'raml':
-                            ATLHelpers.ensureInstanceOf("options.raml", value, Object);
-                            _.merge(atl.options.raml, value);
-                            break;
-                        default:
-                            throw new TypeError("unknown option:" + key);
+            let schemas = atl.raml.schemas();
+            for (let i in schemas) {
+                let schemaList = schemas[i].toJSON();
+                for (let schemaName in schemaList) {
+                    let json = null;
+                    try {
+                        json = JSON.parse(schemaList[schemaName]);
+                        atl._addSchema(schemaName, json);
                     }
-                });
-            }
-        },
-        tests: function (atl, node) {
-            if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
-                var tests = YAML_1.YAMLAstHelpers.getMap(node);
-                var suite = null;
-                for (var sequenceName in tests) {
-                    if (YAML_1.YAMLAstHelpers.isMap(tests[sequenceName])) {
-                        suite = ATLHelpers.parseSuites(sequenceName, tests[sequenceName], atl);
-                        suite.name = sequenceName;
-                        atl.suites[suite.name] = suite;
-                    }
-                    else {
-                        new YAML_1.NodeError("suites must be non-empty maps: " + sequenceName, node);
-                    }
-                }
-            }
-        },
-        schemas: function (atl, node) {
-            if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
-                var schemas = YAML_1.YAMLAstHelpers.getMap(node);
-                if (schemas) {
-                    for (var sequenceName in schemas) {
-                        var schemaName = null;
-                        if (YAML_1.YAMLAstHelpers.isInclude(schemas[sequenceName])) {
-                            // load string schema by path
-                            var include = YAML_1.YAMLAstHelpers.readInclude(schemas[sequenceName]);
-                            var content = include.content(atl.options.FSResolver);
-                            try {
-                                var schemaBody = JSON.parse(content);
-                                // TODO, load schema
-                                atl._addSchema(sequenceName, schemaBody);
-                            }
-                            catch (e) {
-                                new YAML_1.NodeError("error adding schema " + sequenceName + ":" + include.path + ". " + e.toString(), schemas[sequenceName]);
-                            }
-                        }
-                        else {
-                            new YAML_1.NodeError("schemas: invalid schema " + sequenceName + ", it must be a !include reference", schemas[sequenceName]);
-                        }
+                    catch (e) {
+                        e.message = 'Error parsing JSON schema ' + schemaName + '\n\t' + e.message + '\n' + util.inspect(schemaList[schemaName]);
+                        throw e;
                     }
                 }
             }
         }
-    };
-    return ATL;
-}());
+    },
+    variables(atl, node) {
+        if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+            let value = YAML_1.YAMLAstHelpers.toObject(node);
+            atl.options.variables = _.merge(atl.options.variables || {}, value);
+        }
+    },
+    options(atl, node) {
+        if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+            let options = YAML_1.YAMLAstHelpers.toObject(node);
+            Object.keys(options).forEach(key => {
+                let value = options[key];
+                switch (key) {
+                    case 'selfSignedCert':
+                        ATLHelpers.ensureInstanceOf("options.selfSignedCert", value, Boolean);
+                        atl.options.selfSignedCert = !!value;
+                        break;
+                    case 'raml':
+                        ATLHelpers.ensureInstanceOf("options.raml", value, Object);
+                        _.merge(atl.options.raml, value);
+                        break;
+                    default:
+                        throw new TypeError("unknown option:" + key);
+                }
+            });
+        }
+    },
+    tests(atl, node) {
+        if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+            let tests = YAML_1.YAMLAstHelpers.getMap(node);
+            let suite = null;
+            for (let sequenceName in tests) {
+                if (YAML_1.YAMLAstHelpers.isMap(tests[sequenceName])) {
+                    suite = ATLHelpers.parseSuites(sequenceName, tests[sequenceName], atl);
+                    suite.name = sequenceName;
+                    atl.suites[suite.name] = suite;
+                }
+                else {
+                    new YAML_1.NodeError("suites must be non-empty maps: " + sequenceName, node);
+                }
+            }
+        }
+    },
+    schemas(atl, node) {
+        if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, Object)) {
+            let schemas = YAML_1.YAMLAstHelpers.getMap(node);
+            if (schemas) {
+                for (let sequenceName in schemas) {
+                    let schemaName = null;
+                    if (YAML_1.YAMLAstHelpers.isInclude(schemas[sequenceName])) {
+                        // load string schema by path
+                        let include = YAML_1.YAMLAstHelpers.readInclude(schemas[sequenceName]);
+                        let content = include.content(atl.options.FSResolver);
+                        try {
+                            let schemaBody = JSON.parse(content);
+                            // TODO, load schema
+                            atl._addSchema(sequenceName, schemaBody);
+                        }
+                        catch (e) {
+                            new YAML_1.NodeError("error adding schema " + sequenceName + ":" + include.path + ". " + e.toString(), schemas[sequenceName]);
+                        }
+                    }
+                    else {
+                        new YAML_1.NodeError("schemas: invalid schema " + sequenceName + ", it must be a !include reference", schemas[sequenceName]);
+                    }
+                }
+            }
+        }
+    }
+};
 exports.ATL = ATL;
 //# sourceMappingURL=ATL.js.map

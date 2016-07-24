@@ -117,12 +117,14 @@ export namespace CommonAssertions {
     }
 
     validate(response: Response) {
-      if (response.status != this.statusCode)
+      if (response.status != this.statusCode) {
+
         this.error({
           message: 'expected status code {expected} got {actual} instead',
           expected: this.statusCode,
           actual: response.status
         });
+      }
     }
   }
 

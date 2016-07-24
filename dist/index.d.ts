@@ -1,5 +1,7 @@
 import { ATL } from './lib/ATL';
-import ATLHelpers = require('./lib/ATLHelpers');
+export import ATLHelpers = require('./lib/ATLHelpers');
+export import Coverage = require('./lib/Coverage');
+export import YAML = require('./lib/YAML');
 import { RAMLCoverage } from './lib/Coverage';
 export interface IBatOptions {
     baseUri?: string;

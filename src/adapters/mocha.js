@@ -1,70 +1,74 @@
 "use strict";
+// NODE
+const util_1 = require('util');
 // LOCAL
-var ATLHelpers_1 = require('../ATLHelpers');
+const ATLHelpers_1 = require('../lib/ATLHelpers');
+const stringRepresentation = (x) => util_1.inspect(x, false, 30, true);
 function runSuite(suite) {
-    var execFn = suite.skip ? describe.skip : describe;
+    let execFn = suite.skip ? describe.skip : describe;
     if (suite.test) {
-        var test_1 = suite.test;
-        execFn(test_1.description || (suite.name), function () {
-            it(test_1.method.toUpperCase() + ' ' + test_1.uri, function (done) {
-                this.timeout(test_1.timeout + 100);
-                test_1
+        let test = suite.test;
+        execFn(test.description || (suite.name), function () {
+            it(test.method.toUpperCase() + ' ' + test.uri, function (done) {
+                this.timeout(test.timeout + 100);
+                test
                     .requester
                     .promise
-                    .then(function (response) {
+                    .then(response => {
                     done();
                 })
-                    .catch(function (err) {
+                    .catch(err => {
                     done(err);
                 });
             });
-            test_1.assertions.forEach(function (x) {
+            test.assertions.forEach(x => {
                 (x.skip ? it.skip : it)(x.name, function (done) {
-                    this.timeout(test_1.timeout + 100);
+                    this.timeout(test.timeout + 100);
                     x.promise
-                        .then(function (err) {
+                        .then(err => {
                         if (err) {
                             done(err);
                         }
                         else
                             done();
                     })
-                        .catch(function (err) {
+                        .catch(err => {
                         done(err);
                     });
                 });
             });
             it('Result', function (done) {
-                this.timeout(test_1.timeout + 100);
-                test_1
+                this.timeout(test.timeout + 100);
+                test
                     .promise
-                    .then(function (response) {
+                    .then(response => {
                     done();
                 })
-                    .catch(function (err) {
+                    .catch(err => {
                     done(new Error("Test failed"
-                        + "\nREQUEST = " + JSON.stringify(test_1.requester.superAgentRequest, null, 2)
-                        + "\nRESPONSE = " + JSON.stringify(test_1.requester.superAgentResponse, null, 2)));
+                        + "\nURL = " + stringRepresentation(test.requester.url)
+                        + "\nRESPONSE = " + JSON.stringify(test.requester.superAgentResponse, null, 2)
+                        + "\BODY = " + stringRepresentation(test.requester.superAgentResponse.body)));
                 });
             });
         });
-        return test_1.promise
-            .then(function (x) { return true; })
-            .catch(function (x) { return false; });
+        return test.promise
+            .then(x => true)
+            .catch(x => false);
     }
-    var that = this;
-    var flatProm = ATLHelpers_1.flatPromise();
+    let that = this;
+    let flatProm = ATLHelpers_1.flatPromise();
     if (suite.suites && Object.keys(suite.suites).length) {
         execFn(suite.name, function () {
-            var results = [];
-            for (var k in suite.suites) {
+            let results = [];
+            for (let k in suite.suites) {
                 results.push(runSuite(suite.suites[k]));
             }
-            Promise.all(results.filter(function (x) { return !!x; }))
-                .then(function (results) {
-                flatProm.resolver(results.every(function (result) { return result == true; }));
+            Promise.all(results.filter(x => !!x))
+                .then(results => {
+                flatProm.resolver(results.every(result => result == true));
             })
-                .catch(function (results) {
+                .catch(results => {
                 flatProm.resolver(false);
             });
         });
@@ -72,24 +76,24 @@ function runSuite(suite) {
     return flatProm.promise;
 }
 function registerMochaSuites(bat) {
-    var allSuites = [];
+    let allSuites = [];
     describe(bat.file, function () {
-        for (var suiteName in bat.atl.suites) {
+        for (let suiteName in bat.atl.suites) {
             allSuites.push(runSuite(bat.atl.suites[suiteName]));
         }
         if (bat.RAMLCoverage && bat.atl.raml) {
-            describe("RAML Coverage", function () {
+            describe("RAML Coverage", () => {
                 if (bat.atl.options.raml.coverage) {
-                    bat.RAMLCoverage.coverageElements.forEach(function (x) {
+                    bat.RAMLCoverage.coverageElements.forEach(x => {
                         injectMochaCoverageTests(x.resourceAssertion);
                     });
                 }
-                Promise.all(allSuites).then(function (r) {
-                    bat.RAMLCoverage.coverageElements.forEach(function (item) { return item.run(); });
+                Promise.all(allSuites).then(r => {
+                    bat.RAMLCoverage.coverageElements.forEach(item => item.run());
                     Promise.all(bat
                         .RAMLCoverage
                         .coverageElements
-                        .map(function (x) { return x.getCoverage(); })); /*.then(x => {
+                        .map(x => x.getCoverage())); /*.then(x => {
                       let total = x.reduce((prev, actual) => {
                         prev.errored += actual.errored;
                         prev.total += actual.total;
@@ -105,18 +109,18 @@ function registerMochaSuites(bat) {
     });
 }
 exports.registerMochaSuites = registerMochaSuites;
-var walkCoverageAssetion = function (assertion, level) {
+const walkCoverageAssetion = (assertion, level) => {
     if (assertion.validationFn) {
         it(assertion.name, function (done) {
             assertion.promise.promise
-                .then(function () { return done(); })
+                .then(() => done())
                 .catch(done);
         });
     }
     if (assertion.innerAssertions.length) {
         describe(assertion.name, function () {
             this.bail(false);
-            assertion.innerAssertions.forEach(function (x) { return walkCoverageAssetion(x, level + 1); });
+            assertion.innerAssertions.forEach(x => walkCoverageAssetion(x, level + 1));
         });
     }
 };

@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "module": "commonjs",
-        "target": "es5",
+        "target": "es2015",
         "diagnostics": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
@@ -11,8 +11,8 @@
     },
     "exclude": [
         "node_modules",
-        "src/typings/global",
-        "src/typings/global.d.ts",
+        "typings/global",
+        "typings/global.d.ts",
         "src"
     ]
 }

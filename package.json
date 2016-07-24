@@ -41,7 +41,7 @@
     "postversion": "git push && git push --tags",
     "postinstall": "rm -rf test && rm -rf src",
     "lint": "`npm bin`/tslint -t msbuild src/**/*.ts",
-    "build": "rm -rf dist && typings install && `npm bin`/tsc -p tsconfig.json && `npm bin`/tsc -p tsconfig-tests.json"
+    "build": "rm -rf dist && typings install && `npm bin`/tsc -p tsconfig.json && cd test && `npm bin`/tsc -p tsconfig.json && cd .."
   },
   "repository": {
     "url": "https://github.com/mulesoft-labs/http-bat",

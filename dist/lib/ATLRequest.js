@@ -4,11 +4,10 @@ const util_1 = require('util');
 const url = require('url');
 const path = require('path');
 const queryString = require('querystring');
-const _ = require('lodash');
 // LOCAL
 const ATLHelpers_1 = require('./ATLHelpers');
 const Pointer_1 = require('./Pointer');
-const reIsInterpolation = /[^\\]\{([^\}\{]+)\}/g;
+const Interpolation = require('./Interpolation');
 class ATLRequest {
     constructor(test) {
         this.test = test;
@@ -59,22 +58,9 @@ class ATLRequest {
             }
             uriParametersBag[i] = value;
         }
-        this.urlObject.pathname = this.urlObject.pathname.replace(reIsInterpolation, (fulltext, match) => {
-            let value = null;
-            if (match in uriParametersBag) {
-                value = uriParametersBag[match];
-            }
-            else {
-                value = _.get(this.test.suite.atl.options.variables, match);
-            }
-            let typeOfValue = typeof value;
-            if (typeOfValue == "undefined")
-                throw new Error("Can not resolve uriParameter " + match);
-            if (typeOfValue != 'string' && typeOfValue != 'number') {
-                throw new Error("Invalid uriParameter: " + match + "=" + util_1.inspect(value));
-            }
-            return encodeURIComponent(value);
-        });
+        this.urlObject.pathname = Interpolation.interpolateString(this.urlObject.pathname, uriParametersBag);
+        this.urlObject.pathname = Interpolation.interpolateString(this.urlObject.pathname, this.test.suite.atl.options.variables);
+        Interpolation.ensureAllInterpolations(this.urlObject.pathname);
         this.url = url.format(this.urlObject);
         let req = this.superAgentRequest = this.test.suite.atl.agent[this.test.method.toLowerCase()](this.url);
         // we must send some data..

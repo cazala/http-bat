@@ -11,8 +11,7 @@ import _ = require('lodash');
 // LOCAL
 import { ATLTest, cloneObjectUsingPointers, flatPromise, CanceledError } from './ATLHelpers';
 import { Pointer } from './Pointer';
-
-const reIsInterpolation = /[^\\]\{([^\}\{]+)\}/g;
+import Interpolation = require('./Interpolation');
 
 export class ATLRequest {
   urlObject: url.Url;
@@ -89,30 +88,12 @@ export class ATLRequest {
       uriParametersBag[i] = value;
     }
 
-    this.urlObject.pathname = this.urlObject.pathname.replace(reIsInterpolation, (fulltext, match) => {
-      let value = null;
+    this.urlObject.pathname = Interpolation.interpolateString(this.urlObject.pathname, uriParametersBag);
+    this.urlObject.pathname = Interpolation.interpolateString(this.urlObject.pathname, this.test.suite.atl.options.variables);
 
-
-      if (match in uriParametersBag) {
-        value = uriParametersBag[match];
-      } else {
-        value = _.get(this.test.suite.atl.options.variables, match);
-      }
-
-      let typeOfValue = typeof value;
-
-      if (typeOfValue == "undefined")
-        throw new Error("Can not resolve uriParameter " + match);
-
-      if (typeOfValue != 'string' && typeOfValue != 'number') {
-        throw new Error("Invalid uriParameter: " + match + "=" + inspect(value));
-      }
-
-      return encodeURIComponent(value);
-    });
+    Interpolation.ensureAllInterpolations(this.urlObject.pathname);
 
     this.url = url.format(this.urlObject);
-
 
     let req: SuperAgentRequest = this.superAgentRequest = this.test.suite.atl.agent[this.test.method.toLowerCase()](this.url);
 

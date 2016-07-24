@@ -1,4 +1,3 @@
-export declare const type: any;
 export declare class Pointer {
     path: string;
     constructor(path: string);
@@ -7,3 +6,4 @@ export declare class Pointer {
     inspect(): string;
     toString(): string;
 }
+export declare const type: any;

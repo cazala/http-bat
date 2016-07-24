@@ -15,12 +15,12 @@ const pathMatch = require('raml-path-match');
 
 // Locals
 import { ATL } from './lib/ATL';
-import ATLHelpers = require('./lib/ATLHelpers');
+export import ATLHelpers = require('./lib/ATLHelpers');
 
-import Coverage = require('./lib/Coverage');
+export import Coverage = require('./lib/Coverage');
 import { generateString as coverageToString } from './lib/RAMLCoverageReporter';
 import { ATLError, CommonAssertions } from './lib/ATLAssertion';
-import YAML = require('./lib/YAML');
+export import YAML = require('./lib/YAML');
 
 import { RAMLCoverage } from './lib/Coverage';
 

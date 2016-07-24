@@ -3,6 +3,7 @@
 const util_1 = require('util');
 // LOCAL
 const ATLHelpers_1 = require('../lib/ATLHelpers');
+const _ = require('lodash');
 const stringRepresentation = (x) => util_1.inspect(x, false, 30, true);
 function runSuite(suite) {
     let execFn = suite.skip ? describe.skip : describe;
@@ -45,10 +46,13 @@ function runSuite(suite) {
                     done();
                 })
                     .catch(err => {
+                    let response = _.get(test, "requester.superAgentResponse");
+                    let body = _.get(test, "requester.superAgentResponse.body");
+                    let url = _.get(test, "requester.url");
                     done(new Error("Test failed"
-                        + "\nURL = " + stringRepresentation(test.requester.url)
-                        + "\nRESPONSE = " + JSON.stringify(test.requester.superAgentResponse, null, 2)
-                        + "\BODY = " + stringRepresentation(test.requester.superAgentResponse.body)));
+                        + (url ? "\nURL = " + stringRepresentation(url) : "")
+                        + (response ? "\nRESPONSE = " + stringRepresentation(JSON.parse(JSON.stringify(response, null, 2))) : '')
+                        + (body ? ("\nBODY = " + stringRepresentation(body)) : '')));
                 });
             });
         });

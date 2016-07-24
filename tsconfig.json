@@ -1,21 +1,24 @@
 {
-    "compilerOptions": {
-        "module": "commonjs",
-        "target": "ES6",
-        "diagnostics": true,
-        "emitDecoratorMetadata": true,
-        "experimentalDecorators": true,
-        "inlineSourceMap": false,
-        "inlineSources": false,
-        "sourceMap": true,
-        "declaration": true,
-        "outDir": "dist"
-    },
-    "exclude": [
-        "node_modules",
-        "src/typings/global",
-        "src/typings/global.d.ts",
-        "test",
-        "dist"
-    ]
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2015",
+    "diagnostics": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "inlineSourceMap": false,
+    "inlineSources": false,
+    "sourceMap": true,
+    "declaration": true,
+    "outDir": "dist",
+    "moduleResolution": "node",
+    "stripInternal": true,
+    "pretty": true
+  },
+  "exclude": [
+    "node_modules",
+    "src/typings/global",
+    "src/typings/global.d.ts",
+    "test",
+    "dist"
+  ]
 }

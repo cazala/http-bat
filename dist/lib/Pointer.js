@@ -2,12 +2,6 @@
 // NPM
 const Type = require('yaml-ast-parser/dist/type');
 const _ = require('lodash');
-exports.type = new Type('tag:yaml.org,2002:variable', {
-    kind: 'scalar',
-    resolve: resolvePointer,
-    construct: constructVariable,
-    instanceOf: Pointer
-});
 class Pointer {
     constructor(path) {
         this.path = path;
@@ -27,6 +21,12 @@ class Pointer {
 }
 exports.Pointer = Pointer;
 // ---
+exports.type = new Type('tag:yaml.org,2002:variable', {
+    kind: 'scalar',
+    resolve: resolvePointer,
+    construct: constructVariable,
+    instanceOf: Pointer
+});
 function constructVariable(data) {
     return new Pointer(data.value);
 }

@@ -1,3 +1,5 @@
+/// <reference path="typings/index.d.ts" />
+
 declare var describe, it;
 
 import { ATLTest } from '../dist/lib/ATLHelpers';

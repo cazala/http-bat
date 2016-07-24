@@ -1,7 +1,8 @@
+/// <reference path="typings/index.d.ts" />
 "use strict";
-var ATLHelpers = require('./../dist/lib/ATLHelpers');
-var expect_1 = require('expect');
-var Pointer = ATLHelpers.pointerLib.Pointer;
+const ATLHelpers = require('./../dist/lib/ATLHelpers');
+const Pointer = ATLHelpers.pointerLib.Pointer;
+const expect = require('expect');
 /*
 describe('Empty Object -> ATL', () => {
   let atl = new ATL();
@@ -1204,77 +1205,77 @@ it('must parse response.status', () => {
 
 });
 */
-describe('cloneObject', function () {
-    it('native types must be untouched', function () {
-        var store = {};
-        var value = "asd";
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
+describe('cloneObject', () => {
+    it('native types must be untouched', () => {
+        let store = {};
+        let value = "asd";
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
         value = 123;
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
         value = false;
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
         value = null;
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
         value = new Date;
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
     });
-    it('objects must be cloned', function () {
-        var store = {};
-        var value = { a: 1, b: "2", c: null, d: undefined, e: false, f: new Date };
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store) !== value).toBe(true, "Got same object reference");
+    it('objects must be cloned', () => {
+        let store = {};
+        let value = { a: 1, b: "2", c: null, d: undefined, e: false, f: new Date };
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store) !== value).toBe(true, "Got same object reference");
     });
-    it('arrays must be cloned', function () {
-        var store = {};
-        var value = ["asd", 123, null, false, new Date];
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store) !== value).toBe(true, "Got same object reference");
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store) instanceof Array).toBe(true, "Not instance of an array");
+    it('arrays must be cloned', () => {
+        let store = {};
+        let value = ["asd", 123, null, false, new Date];
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store) !== value).toBe(true, "Got same object reference");
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store) instanceof Array).toBe(true, "Not instance of an array");
     });
-    it('arrays containing objects must be cloned recursively', function () {
-        var store = {};
-        var value = [[], { a: 2 }, "asd", 123, null, false, new Date, { a: 1, b: "2", c: null, d: undefined, e: false, f: new Date }];
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store) !== value).toBe(true, "Got same object reference");
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)[0] !== value[0]).toBe(true, "Got same object reference internal");
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)[1] !== value[1]).toBe(true, "Got same object reference internal");
+    it('arrays containing objects must be cloned recursively', () => {
+        let store = {};
+        let value = [[], { a: 2 }, "asd", 123, null, false, new Date, { a: 1, b: "2", c: null, d: undefined, e: false, f: new Date }];
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store) !== value).toBe(true, "Got same object reference");
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)[0] !== value[0]).toBe(true, "Got same object reference internal");
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)[1] !== value[1]).toBe(true, "Got same object reference internal");
     });
-    it('objects containing arrays must be cloned recursively', function () {
-        var store = {};
-        var value = { a: 1, b: "2", c: null, d: undefined, e: false, f: new Date, arr: ["asd", 123, null, false, new Date] };
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store) !== value).toBe(true, "Got same object reference");
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store).arr !== value.arr).toBe(true, "Got same object reference internal");
+    it('objects containing arrays must be cloned recursively', () => {
+        let store = {};
+        let value = { a: 1, b: "2", c: null, d: undefined, e: false, f: new Date, arr: ["asd", 123, null, false, new Date] };
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(value, typeof value);
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store) !== value).toBe(true, "Got same object reference");
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store).arr !== value.arr).toBe(true, "Got same object reference internal");
     });
-    it('pointers must be readed inside objects', function () {
-        var store = { a: 3 };
-        var expected = { val: 3 };
-        var value = {
+    it('pointers must be readed inside objects', () => {
+        let store = { a: 3 };
+        let expected = { val: 3 };
+        let value = {
             val: new Pointer("a")
         };
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(expected, typeof value);
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(expected, typeof value);
     });
-    it('a single pointer must be readed and return the value', function () {
-        var store = { a: 3 };
-        var expected = 3;
-        var value = new Pointer("a");
-        expect_1.default(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(expected, typeof value);
+    it('a single pointer must be readed and return the value', () => {
+        let store = { a: 3 };
+        let expected = 3;
+        let value = new Pointer("a");
+        expect(ATLHelpers.cloneObjectUsingPointers(value, store)).toEqual(expected, typeof value);
     });
-    it('a single pointer must be readed, if the result is an object, it must be cloned', function () {
-        var store = { a: { c: 3 } };
-        var expected = { c: 3 };
-        var value = new Pointer("a");
-        var result = ATLHelpers.cloneObjectUsingPointers(value, store);
-        expect_1.default(result).toEqual(expected, typeof value);
-        expect_1.default(result !== store.a).toBe(true, "Reference not copied");
+    it('a single pointer must be readed, if the result is an object, it must be cloned', () => {
+        let store = { a: { c: 3 } };
+        let expected = { c: 3 };
+        let value = new Pointer("a");
+        let result = ATLHelpers.cloneObjectUsingPointers(value, store);
+        expect(result).toEqual(expected, typeof value);
+        expect(result !== store.a).toBe(true, "Reference not copied");
     });
-    it('if the pointer is an object or array, the result must be cloned', function () {
-        var store = { a: { c: 3 } };
-        var expected = { val: { c: 3 } };
-        var value = { val: new Pointer("a") };
-        var result = ATLHelpers.cloneObjectUsingPointers(value, store);
-        expect_1.default(result).toEqual(expected, typeof value);
-        expect_1.default(result.val !== store.a).toBe(true, "Reference not copied");
+    it('if the pointer is an object or array, the result must be cloned', () => {
+        let store = { a: { c: 3 } };
+        let expected = { val: { c: 3 } };
+        let value = { val: new Pointer("a") };
+        let result = ATLHelpers.cloneObjectUsingPointers(value, store);
+        expect(result).toEqual(expected, typeof value);
+        expect(result.val !== store.a).toBe(true, "Reference not copied");
     });
 });
 //# sourceMappingURL=ATL.spec.js.map

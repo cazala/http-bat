@@ -13,6 +13,7 @@ exports.ATLHelpers = require('./lib/ATLHelpers');
 exports.Coverage = require('./lib/Coverage');
 exports.YAML = require('./lib/YAML');
 const Coverage_1 = require('./lib/Coverage');
+const es6_promise_1 = require('es6-promise');
 class Bat {
     constructor(options = {}) {
         this.options = options;
@@ -80,12 +81,12 @@ class Bat {
                 let testResult = test.promise;
                 allDone.push(testResult
                     .then(result => {
-                    return Promise.resolve({
+                    return es6_promise_1.Promise.resolve({
                         success: true
                     });
                 })
                     .catch(result => {
-                    return Promise.resolve({
+                    return es6_promise_1.Promise.resolve({
                         success: false
                     });
                 }));
@@ -100,7 +101,7 @@ class Bat {
                     });
                 }
             });
-            Promise.all(allDone).then(() => prom.resolver());
+            es6_promise_1.Promise.all(allDone).then(() => prom.resolver());
             Object.keys(this.atl.suites).forEach(x => this.atl.suites[x].run());
         }
         catch (e) {
