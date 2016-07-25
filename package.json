@@ -40,7 +40,7 @@
     "version": "echo VERSION",
     "postversion": "git push && git push --tags",
     "lint": "`npm bin`/tslint -t msbuild src/**/*.ts",
-    "build": "rm -rf dist && typings install && `npm bin`/tsc -p tsconfig.json && cp -R src/typings test && cd test && `npm bin`/tsc -p tsconfig.json && cd .."
+    "build": "rm -rf dist && typings install && `npm bin`/tsc -p tsconfig.json && (rm -rf test/typings || true) && cp -R src/typings test && cd test && `npm bin`/tsc -p tsconfig.json && cd .. && chmod +x dist/bin/http-bat.js"
   },
   "repository": {
     "url": "https://github.com/mulesoft-labs/http-bat",
