@@ -1,1 +1,15 @@
-{}
+{
+  "name": "http-bat",
+  "version": false,
+  "dependencies": {
+    "es6-promise": "registry:npm/es6-promise#3.0.0+20160723033700",
+    "lodash": "registry:npm/lodash#4.0.0+20160723033700",
+    "methods": "registry:npm/methods#1.0.0+20160723033700"
+  },
+  "globalDependencies": {
+    "node": "registry:env/node#6.0.0+20160723033700",
+    "superagent": "registry:dt/superagent#1.4.0+20160724070541",
+    "supertest": "registry:dt/supertest#1.1.0+20160724070541"
+  },
+  "resolution": "src/typings"
+}

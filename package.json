@@ -6,10 +6,9 @@
     "url": "https://www.mulesoft.com"
   },
   "license": "MIT",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "dependencies": {
     "es6-promise": "^3.2.1",
-    "expect": "^1.18.0",
     "glob": "^7.0.3",
     "jsonschema": "^1.1.0",
     "lodash": "^4.11.1",
@@ -27,27 +26,29 @@
     "body-parser": "^1.15.0",
     "connect-busboy": "0.0.2",
     "coveralls": "^2.11.9",
+    "expect": "^1.20.2",
     "express": "4.13.4",
     "istanbul": "^0.4.3",
-    "tslint": "^3.10.2"
+    "tslint": "^3.10.2",
+    "typings": "^1.3.2"
   },
   "scripts": {
     "test": "mocha --reporter spec",
     "coverage": "(`npm bin`/istanbul cover `npm bin`/_mocha || true)",
-    "test-travis": "npm run lint && npm run build && npm run coverage && npm run test && node bin/http-bat.js test/cli.spec.yml",
+    "test-travis": "npm run lint && npm run build && npm run coverage && npm run test && node dist/bin/http-bat.js test/valid-specs/cli.spec.yml",
     "preversion": "npm test",
     "version": "echo VERSION",
     "postversion": "git push && git push --tags",
-    "lint": "`npm bin`/tslint -t msbuild lib/**/*.ts",
-    "build": "`npm bin`/tsc -p tsconfig.json"
+    "lint": "`npm bin`/tslint -t msbuild src/**/*.ts",
+    "build": "rm -rf dist && typings install && `npm bin`/tsc -p tsconfig.json && cp -R src/typings test && cd test && `npm bin`/tsc -p tsconfig.json && cd .."
   },
   "repository": {
     "url": "https://github.com/mulesoft-labs/http-bat",
     "type": "git"
   },
-  "main": "lib/bat.js",
-  "typings": "lib/bat.ts",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "bin": {
-    "http-bat": "bin/http-bat.js"
+    "http-bat": "dist/bin/http-bat.js"
   }
 }

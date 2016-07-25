@@ -44,5 +44,5 @@ terminal.glue
 
 .alm
 
-src/typings
-test/typings
+src
+test

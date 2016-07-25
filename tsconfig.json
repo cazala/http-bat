@@ -1,19 +1,24 @@
 {
-    "compilerOptions": {
-        "module": "commonjs",
-        "target": "es5",
-        "diagnostics": true,
-        "emitDecoratorMetadata": true,
-        "experimentalDecorators": true,
-        "inlineSourceMap": false,
-        "inlineSources": false,
-        "sourceMap": true
-        //"allowJs": true
-    },
-    "exclude": [
-        "typings/browser.d.ts",
-        "typings/browser",
-        "node_modules",
-        "!node_modules/@types"
-    ]
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2015",
+    "diagnostics": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "inlineSourceMap": false,
+    "inlineSources": false,
+    "sourceMap": true,
+    "declaration": true,
+    "outDir": "dist",
+    "moduleResolution": "node",
+    "stripInternal": true,
+    "pretty": true
+  },
+  "exclude": [
+    "node_modules",
+    "src/typings/global",
+    "src/typings/global.d.ts",
+    "test",
+    "dist"
+  ]
 }

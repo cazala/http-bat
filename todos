@@ -1,0 +1,30 @@
+GET /#: must parse to {GET /}
+Query parameters must be loaded on `queryParameters`
+Check for duplicated tests on a suite
+Check for duplicated suite names
+
+
+null parse on yaml
+
+must fail:
+  GET /:
+    queryParameters:
+      a: false
+
+must pass and generate 2 tests:
+  GET /:
+    ..
+  GET /#:
+    ..
+
+
+
+est env variables
+
+
+tests:
+  "Create project tests":
+    POST /organizations/{ENV.organizationId}/projects:
+      #                  ^
+      response:
+        status: 201

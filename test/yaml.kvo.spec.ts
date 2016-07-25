@@ -1,4 +1,6 @@
-import YAML = require('../lib/YAML');
+/// <reference path="typings/index.d.ts" />
+
+import { YAML } from '../dist';
 import util = require('util');
 
 declare var describe, it;

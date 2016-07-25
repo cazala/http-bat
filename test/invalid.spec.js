@@ -1,21 +1,21 @@
+/// <reference path="typings/index.d.ts" />
 "use strict";
-var bat_1 = require('../lib/bat');
-var YAML = require('../lib/YAML');
-var glob = require('glob');
-var foundFiles = glob.sync('invalid-specs/**/*.yml', {
+const dist_1 = require('../dist');
+const glob = require('glob');
+let foundFiles = glob.sync('invalid-specs/**/*.yml', {
     nodir: true,
     cwd: __dirname,
     realpath: true,
     stat: true
 });
-foundFiles.forEach(function (file) {
-    describe(file, function () {
-        it('must fail on parsing', function (done) {
-            var instance = new bat_1.Bat();
+foundFiles.forEach(file => {
+    describe(file, () => {
+        it('must fail on parsing', (done) => {
+            let instance = new dist_1.Bat();
             instance.load(file);
             if (instance.errors.length) {
-                instance.errors.forEach(function (element) {
-                    YAML.printError(element);
+                instance.errors.forEach(element => {
+                    dist_1.YAML.printError(element);
                 });
                 done();
             }
@@ -31,14 +31,14 @@ foundFiles = glob.sync('valid-specs/**/*.spec.yml', {
     realpath: true,
     stat: true
 });
-foundFiles.forEach(function (file) {
-    describe(file, function () {
-        it('must parse without errors', function (done) {
-            var instance = new bat_1.Bat();
+foundFiles.forEach(file => {
+    describe(file, () => {
+        it('must parse without errors', (done) => {
+            let instance = new dist_1.Bat();
             instance.load(file);
             if (instance.errors.length) {
-                instance.errors.forEach(function (element) {
-                    YAML.printError(element);
+                instance.errors.forEach(element => {
+                    dist_1.YAML.printError(element);
                 });
                 done(instance.errors[0]);
             }

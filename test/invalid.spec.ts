@@ -1,5 +1,6 @@
-import { Bat } from '../lib/bat';
-import YAML = require('../lib/YAML');
+/// <reference path="typings/index.d.ts" />
+
+import { Bat, YAML } from '../dist';
 
 const glob = require('glob');
 

@@ -1,7 +1,9 @@
+/// <reference path="typings/index.d.ts" />
+
 const app = require('./server');
-import {Bat} from '../lib/bat';
-import ATLHelpers = require('../lib/ATLHelpers');
+import { Bat, ATLHelpers } from '../dist';
 import util = require('util');
+import registerMochaSuites = require('../dist/adapters/mocha');
 
 
 const instance = new Bat({
@@ -127,8 +129,7 @@ describe('HTTP CALLS', function () {
     .forEach(suiteHandler);
 
 
-  let registerMochaSuites = require('../lib/adapters/mocha').registerMochaSuites;
-  registerMochaSuites(instance);
+  registerMochaSuites.registerMochaSuites(instance);
 
   instance.run(app)
     .then(function (error) {
