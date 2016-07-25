@@ -16,6 +16,7 @@ export interface IATLOptions {
         traits: boolean;
     };
     FSResolver: IFSResolver;
+    loadAssets: boolean;
 }
 export declare class ATL {
     static interprete: {

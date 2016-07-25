@@ -8,6 +8,7 @@ export interface IBatOptions {
     variables?: ATLHelpers.IDictionary<any>;
     file?: string;
     raw?: string;
+    loadAssets?: boolean;
 }
 export declare class Bat {
     options: IBatOptions;

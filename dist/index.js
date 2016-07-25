@@ -14,7 +14,7 @@ exports.Coverage = require('./lib/Coverage');
 exports.YAML = require('./lib/YAML');
 const Coverage_1 = require('./lib/Coverage');
 class Bat {
-    constructor(options = {}) {
+    constructor(options = { loadAssets: true }) {
         this.options = options;
         this.errors = [];
         this.atl = new ATL_1.ATL();
@@ -22,7 +22,7 @@ class Bat {
         if (options.raw) {
             this.raw(options.raw);
         }
-        else if (this.options.file) {
+        else if (options.file) {
             this.load(options.file);
         }
     }
@@ -42,7 +42,8 @@ class Bat {
     }
     raw(content) {
         let parsed = exports.YAML.load(content);
-        this.atl.options.path = this.path;
+        this.atl.options.path = this.path || this.file && path.dirname(this.file);
+        this.atl.options.loadAssets = this.options.loadAssets;
         this.atl.fromAST(parsed);
         this.updateState();
         exports.YAML.walkFindingErrors(parsed, this.errors);

@@ -21,7 +21,8 @@ class ATL {
                 resourceTypes: true,
                 traits: true
             },
-            FSResolver: null
+            FSResolver: null,
+            loadAssets: true
         };
         this.suites = {};
         this.schemas = {};
@@ -147,6 +148,8 @@ ATL.interprete = {
     raml(atl, node) {
         if (YAML_1.YAMLAstHelpers.ensureInstanceOf(node, String)) {
             let value = YAML_1.YAMLAstHelpers.readScalar(node);
+            if (!atl.options.loadAssets)
+                return;
             try {
                 atl.raml = RAML.loadApiSync(value, { rejectOnErrors: true, fsResolver: atl.options.FSResolver });
             }

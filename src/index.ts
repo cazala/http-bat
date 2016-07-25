@@ -30,6 +30,7 @@ export interface IBatOptions {
   variables?: ATLHelpers.IDictionary<any>;
   file?: string;
   raw?: string;
+  loadAssets?: boolean;
 }
 
 export class Bat {
@@ -41,14 +42,14 @@ export class Bat {
 
   errors = [];
 
-  constructor(public options: IBatOptions = {}) {
+  constructor(public options: IBatOptions = { loadAssets: true }) {
     this.atl = new ATL();
 
     let gotAST = ATLHelpers.flatPromise();
 
     if (options.raw) {
       this.raw(options.raw);
-    } else if (this.options.file) {
+    } else if (options.file) {
       this.load(options.file);
     }
   }
@@ -74,7 +75,9 @@ export class Bat {
   raw(content: string) {
     let parsed = YAML.load(content);
 
-    this.atl.options.path = this.path;
+
+    this.atl.options.path = this.path || this.file && path.dirname(this.file);
+    this.atl.options.loadAssets = this.options.loadAssets;
     this.atl.fromAST(parsed as any);
 
     this.updateState();

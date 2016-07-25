@@ -28,6 +28,7 @@ export interface IATLOptions {
     traits: boolean;
   };
   FSResolver: IFSResolver;
+  loadAssets: boolean;
 }
 
 export class ATL {
@@ -47,6 +48,8 @@ export class ATL {
     raml(atl: ATL, node: ASTParser.YAMLNode) {
       if (YAMLAstHelpers.ensureInstanceOf(node, String)) {
         let value = YAMLAstHelpers.readScalar(node);
+
+        if (!atl.options.loadAssets) return;
 
         try {
           atl.raml = RAML.loadApiSync(value, { rejectOnErrors: true, fsResolver: atl.options.FSResolver });
@@ -174,7 +177,8 @@ export class ATL {
       resourceTypes: true,
       traits: true
     },
-    FSResolver: null
+    FSResolver: null,
+    loadAssets: true
   };
 
   constructor(options?: IATLOptions) {
