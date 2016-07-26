@@ -4,10 +4,34 @@ const app = require('./server');
 const dist_1 = require('../dist');
 const util = require('util');
 const registerMochaSuites = require('../dist/adapters/mocha');
+const _ = require('lodash');
 const instance = new dist_1.Bat({
-    file: __dirname + '/valid-specs/test-1.spec.yml'
+    file: __dirname + '/valid-specs/local.spec.yml'
+});
+describe('Sanity', function () {
+    this.bail(true);
+    it('must load a raml', () => {
+        if (!instance.atl.raml)
+            throw new Error("No raml found");
+    });
+    it('must have a default FSResolver', () => {
+        if (!instance.atl.options.FSResolver)
+            throw new Error("No FSResolver found");
+    });
+    it('include must work', () => {
+        let readed = dist_1.ATLHelpers.cloneObjectUsingPointers(_.get(instance.atl.options.variables, 'json'), instance.atl.options.variables, instance.atl.options.FSResolver);
+        if (!readed || !readed.json)
+            throw new Error("Readed: " + JSON.stringify(readed));
+    });
+    it('pointer include must work', () => {
+        let pointer = new dist_1.ATLHelpers.pointerLib.Pointer('oauth.test');
+        let readed = dist_1.ATLHelpers.cloneObjectUsingPointers(pointer, instance.atl.options.variables, instance.atl.options.FSResolver);
+        if (!readed || !readed.json)
+            throw new Error("Readed: " + JSON.stringify(readed));
+    });
 });
 describe('HTTP CALLS', function () {
+    this.bail(false);
     const promiseColor = prom => {
         let res = util.inspect(prom);
         if (res == 'Promise { <pending> }') {
@@ -103,4 +127,4 @@ describe('HTTP CALLS', function () {
         instance.RAMLCoverage && instance.RAMLCoverage.writeCoverage(__dirname + '/../coverage/lcov.info');
     });
 });
-//# sourceMappingURL=test.spec.js.map
+//# sourceMappingURL=5.test-local.spec.js.map

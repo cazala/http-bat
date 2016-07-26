@@ -32,7 +32,7 @@ class ATLRequest {
         if (this.test.request.queryParameters) {
             if ('search' in this.urlObject)
                 delete this.urlObject.search;
-            let qsParams = ATLHelpers_1.cloneObjectUsingPointers(this.test.request.queryParameters, this.test.suite.atl.options.variables);
+            let qsParams = ATLHelpers_1.cloneObjectUsingPointers(this.test.request.queryParameters, this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver);
             for (let i in qsParams) {
                 let typeOfValue = typeof qsParams[i];
                 if (typeOfValue == 'undefined')
@@ -66,13 +66,13 @@ class ATLRequest {
         // we must send some data..
         if (this.test.request) {
             if (this.test.request.headers) {
-                let headers = ATLHelpers_1.cloneObjectUsingPointers(this.test.request.headers, this.test.suite.atl.options.variables);
+                let headers = ATLHelpers_1.cloneObjectUsingPointers(this.test.request.headers, this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver);
                 for (let h in headers) {
                     req.set(h, headers[h] == undefined ? '' : headers[h].toString());
                 }
             }
             if (this.test.request.json) {
-                let data = ATLHelpers_1.cloneObjectUsingPointers(this.test.request.json, this.test.suite.atl.options.variables);
+                let data = ATLHelpers_1.cloneObjectUsingPointers(this.test.request.json, this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver);
                 req.send(data);
             }
             if (this.test.request.attach) {
@@ -87,7 +87,7 @@ class ATLRequest {
             if (this.test.request.form) {
                 req.type('form');
                 for (let i in this.test.request.form) {
-                    let currentAttachment = ATLHelpers_1.cloneObjectUsingPointers(this.test.request.form[i], this.test.suite.atl.options.variables);
+                    let currentAttachment = ATLHelpers_1.cloneObjectUsingPointers(this.test.request.form[i], this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver);
                     req.field(currentAttachment.key, currentAttachment.value);
                 }
             }
@@ -99,10 +99,10 @@ class ATLRequest {
                         if (!(holder[x.key] instanceof Array)) {
                             holder[x.key] = [holder[x.key]];
                         }
-                        holder[x.key].push(ATLHelpers_1.cloneObjectUsingPointers(x.value, this.test.suite.atl.options.variables));
+                        holder[x.key].push(ATLHelpers_1.cloneObjectUsingPointers(x.value, this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver));
                     }
                     else {
-                        holder[x.key] = ATLHelpers_1.cloneObjectUsingPointers(x.value, this.test.suite.atl.options.variables);
+                        holder[x.key] = ATLHelpers_1.cloneObjectUsingPointers(x.value, this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver);
                     }
                 });
                 req.send(holder);

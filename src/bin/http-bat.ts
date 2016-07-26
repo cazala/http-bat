@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 // NODE
 import path = require('path');
-import fs = require('fs');
 import { dirname, resolve, join as joinPath } from 'path';
-import _ = require('lodash');
 
 // NPM
 const glob = require('glob');
 const Mocha = require('mocha');
+import _ = require('lodash');
 
 // LOCALS
 import { Bat } from '../index';
@@ -21,7 +20,7 @@ declare var describe, it;
 const pkg = require('../../package.json');
 
 let opts = require('yargs')
-  .usage('http-bat test.yml [--uri uri] -- [mocha argv]')
+  .usage('http-bat test.yml [--uri uri]')
   .version('version', pkg.version)
   .alias('u', 'uri')
   .describe('u', 'target Uri')

@@ -12,6 +12,7 @@ export declare const DefaultFileResolver: FSResolver;
 export declare class IncludedFile {
     path: string;
     constructor(path: string);
+    private cachedContent;
     content(fsResolver?: IFSResolver): string;
     contentAsync(fsResolver?: IFSResolver): Promise<string>;
     static getInstance(path: string): IncludedFile;

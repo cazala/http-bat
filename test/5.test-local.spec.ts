@@ -4,16 +4,48 @@ const app = require('./server');
 import { Bat, ATLHelpers } from '../dist';
 import util = require('util');
 import registerMochaSuites = require('../dist/adapters/mocha');
-
-
-const instance = new Bat({
-  file: __dirname + '/valid-specs/test-1.spec.yml'
-});
+import _ = require('lodash');
 
 declare var describe, it;
 
-describe('HTTP CALLS', function () {
 
+const instance = new Bat({
+  file: __dirname + '/valid-specs/local.spec.yml'
+});
+
+describe('Sanity', function () {
+  this.bail(true);
+  it('must load a raml', () => {
+    if (!instance.atl.raml)
+      throw new Error("No raml found");
+  });
+
+  it('must have a default FSResolver', () => {
+    if (!instance.atl.options.FSResolver)
+      throw new Error("No FSResolver found");
+  });
+
+  it('include must work', () => {
+    let readed = ATLHelpers.cloneObjectUsingPointers(_.get(instance.atl.options.variables, 'json'), instance.atl.options.variables, instance.atl.options.FSResolver);
+
+    if (!readed || !readed.json)
+      throw new Error("Readed: " + JSON.stringify(readed));
+  });
+
+
+  it('pointer include must work', () => {
+    let pointer = new ATLHelpers.pointerLib.Pointer('oauth.test');
+
+    let readed = ATLHelpers.cloneObjectUsingPointers(pointer, instance.atl.options.variables, instance.atl.options.FSResolver);
+
+    if (!readed || !readed.json)
+      throw new Error("Readed: " + JSON.stringify(readed));
+  });
+});
+
+
+describe('HTTP CALLS', function () {
+  this.bail(false);
   const promiseColor = prom => {
     let res = util.inspect(prom);
 

@@ -12,7 +12,7 @@ const httpBatMochaAdapter = require('../adapters/mocha');
 const RAMLCoverageReporter_1 = require('../lib/RAMLCoverageReporter');
 const pkg = require('../../package.json');
 let opts = require('yargs')
-    .usage('http-bat test.yml [--uri uri] -- [mocha argv]')
+    .usage('http-bat test.yml [--uri uri]')
     .version('version', pkg.version)
     .alias('u', 'uri')
     .describe('u', 'target Uri')

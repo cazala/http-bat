@@ -1,8 +1,9 @@
+import { YAMLNode } from 'yaml-ast-parser';
 import { ATL } from './ATL';
 export import pointerLib = require('./Pointer');
 import { ATLResponseAssertion } from './ATLAssertion';
 import { ATLRequest } from './ATLRequest';
-import { YAMLNode } from 'yaml-ast-parser';
+import { IFSResolver } from './FileSystem';
 import { ASTParser, KeyValueObject } from './YAML';
 export interface IDictionary<T> {
     [key: string]: T;
@@ -81,7 +82,7 @@ export declare function parseMethodHeader(name: any): {
     method: string;
     url: string;
 };
-export declare function cloneObjectUsingPointers<T>(baseObject: T, store: any): any;
+export declare function cloneObjectUsingPointers<T>(baseObject: T, store: any, fsResolver?: IFSResolver): any;
 export declare function flatPromise(): {
     resolver: (a?: any) => any;
     rejecter: (a: any) => any;

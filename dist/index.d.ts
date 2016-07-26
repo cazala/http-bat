@@ -3,12 +3,14 @@ export import ATLHelpers = require('./lib/ATLHelpers');
 export import Coverage = require('./lib/Coverage');
 export import YAML = require('./lib/YAML');
 import { RAMLCoverage } from './lib/Coverage';
+export import FileSystem = require('./lib/FileSystem');
 export interface IBatOptions {
     baseUri?: string;
     variables?: ATLHelpers.IDictionary<any>;
     file?: string;
     raw?: string;
     loadAssets?: boolean;
+    FSResolver?: FileSystem.IFSResolver;
 }
 export declare class Bat {
     options: IBatOptions;

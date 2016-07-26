@@ -9,14 +9,14 @@ export interface IATLOptions {
     file?: string;
     baseUri?: string;
     baseUriParameters?: ATLHelpers.IDictionary<string>;
-    selfSignedCert: boolean;
-    raml: {
-        coverage: boolean;
-        resourceTypes: boolean;
-        traits: boolean;
+    selfSignedCert?: boolean;
+    raml?: {
+        coverage?: boolean;
+        resourceTypes?: boolean;
+        traits?: boolean;
     };
-    FSResolver: IFSResolver;
-    loadAssets: boolean;
+    FSResolver?: IFSResolver;
+    loadAssets?: boolean;
 }
 export declare class ATL {
     static interprete: {

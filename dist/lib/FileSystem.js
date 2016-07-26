@@ -12,12 +12,14 @@ class FSResolver {
         }
         path = path_1.resolve(this.basePath, path);
         if (!fs.existsSync(path)) {
+            console.log('file does not exists: ' + path);
             return null;
         }
         try {
             return fs.readFileSync(path).toString();
         }
         catch (e) {
+            console.log(e);
             return null;
         }
     }

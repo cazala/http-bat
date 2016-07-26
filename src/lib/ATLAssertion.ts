@@ -47,7 +47,7 @@ export abstract class ATLAssertion {
   }
 
   protected getObjectValue(object: any) {
-    return cloneObjectUsingPointers(object, this.parent.suite.atl.options.variables);
+    return cloneObjectUsingPointers(object, this.parent.suite.atl.options.variables, this.parent.suite.atl.options.FSResolver);
   }
 }
 

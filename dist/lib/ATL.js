@@ -29,6 +29,8 @@ class ATL {
         this.errors = [];
         if (options)
             _.merge(this.options, options);
+        if (!('loadAssets' in options))
+            this.options.loadAssets = true;
         if (!this.options.FSResolver)
             this.options.FSResolver = new FileSystem_1.FSResolver(this.options.path);
     }
@@ -238,7 +240,7 @@ ATL.interprete = {
                     if (YAML_1.YAMLAstHelpers.isInclude(schemas[sequenceName])) {
                         // load string schema by path
                         let include = YAML_1.YAMLAstHelpers.readInclude(schemas[sequenceName]);
-                        let content = include.content(atl.options.FSResolver);
+                        let content = atl.options.loadAssets ? include.content(atl.options.FSResolver) : '{}';
                         try {
                             let schemaBody = JSON.parse(content);
                             // TODO, load schema

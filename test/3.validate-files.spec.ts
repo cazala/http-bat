@@ -6,7 +6,7 @@ const glob = require('glob');
 
 declare var describe, it;
 
-let foundFiles = glob.sync('invalid-specs/**/*.yml', {
+let foundFiles: string[] = glob.sync('invalid-specs/**/*.yml', {
   nodir: true,
   cwd: __dirname,
   realpath: true,

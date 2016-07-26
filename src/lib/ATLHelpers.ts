@@ -3,15 +3,14 @@ import util = require('util');
 
 // NPM
 import methods = require('methods');
+import { YAMLNode, YAMLSequence } from 'yaml-ast-parser';
 
 // LOCAL
 import { ATL } from './ATL';
 export import pointerLib = require('./Pointer');
 import { ATLError, ATLResponseAssertion, CommonAssertions } from './ATLAssertion';
 import { ATLRequest } from './ATLRequest';
-
-import { YAMLNode, YAMLSequence } from 'yaml-ast-parser';
-
+import { IncludedFile, IFSResolver, DefaultFileResolver } from './FileSystem';
 import { ASTParser, YAMLAstHelpers, NodeError, KeyValueObject } from './YAML';
 
 
@@ -658,17 +657,15 @@ export function parseMethodHeader(name) {
   };
 }
 
-
-export function cloneObjectUsingPointers<T>(baseObject: T, store): any {
+export function cloneObjectUsingPointers<T>(baseObject: T, store, fsResolver?: IFSResolver): any {
   if (typeof baseObject !== "object") {
     return baseObject;
   }
 
-  return cloneObject(baseObject, store);
+  return cloneObject(baseObject, store, fsResolver);
 }
 
-
-function cloneObject(obj, store) {
+function cloneObject(obj, store, fsResolver?: IFSResolver) {
 
   if (obj === null || obj === undefined)
     return obj;
@@ -685,18 +682,47 @@ function cloneObject(obj, store) {
     return obj;
   }
 
+  if (obj instanceof IncludedFile) {
+    if (!fsResolver) {
+      return undefined;
+    }
+
+    let content;
+
+
+    content = (obj as IncludedFile).content(fsResolver);
+
+    if (content === null) {
+      console.error("cloneObject::Error::Failed to load " + obj.path);
+      return undefined;
+    }
+
+    if ((obj as IncludedFile).path.toLowerCase().substr(-5) == '.json') {
+      try {
+        return JSON.parse(content);
+      } catch (e) {
+        console.error("cloneObject::Error::Failed to load " + obj.path + ". Invalid JSON: " + e.toString());
+        return undefined;
+      }
+    }
+
+    return content;
+  }
+
   // Handle Array (return a full slice of the array)
   if (obj instanceof Array) {
     let newArray = obj.slice();
-    return newArray.map(x => cloneObject(x, store));
+    return newArray.map(x => cloneObject(x, store, fsResolver));
   }
 
   if (obj instanceof pointerLib.Pointer) {
     let result: any;
     try {
-      result = cloneObject(obj.get(store), store);
+      let gottenValue = obj.get(store);
+      result = cloneObject(gottenValue, store, fsResolver);
     } catch (e) {
       console.error("cloneObject::Error", e);
+      throw e;
     }
 
     return result;
@@ -711,7 +737,7 @@ function cloneObject(obj, store) {
     let copy = new obj.constructor();
     for (let attr in obj) {
       if (obj.hasOwnProperty(attr)) {
-        copy[attr] = cloneObject(obj[attr], store);
+        copy[attr] = cloneObject(obj[attr], store, fsResolver);
       }
     }
     return copy;

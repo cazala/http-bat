@@ -20,18 +20,19 @@ export class FSResolver implements IFSResolver {
     path = resolve(this.basePath, path);
 
     if (!fs.existsSync(path)) {
+      console.log('file does not exists: ' + path);
       return null;
     }
 
     try {
       return fs.readFileSync(path).toString();
     } catch (e) {
+      console.log(e);
       return null;
     }
   }
   contentAsync(path: string): Promise<string> {
     return new Promise(function (resolve, reject) {
-
       fs.readFile(path, function (err, data) {
         if (err != null) {
           return reject(err);

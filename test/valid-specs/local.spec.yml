@@ -16,10 +16,12 @@ variables:
   test: !include test.json
   oauth:
     accessToken: "EMPTY_VALUE"
+    test: !include test.json
   ENV:
     NODE_ENV: FAKE_ENV
     PORT: 0
   number_201: 201
+  json: !include test.json
 
 options:
   selfSignedCert: true
@@ -120,7 +122,6 @@ tests:
       response:
         status: 223
 
-
   "Text Response":
     async: true
     GET /responses/text:
@@ -128,8 +129,6 @@ tests:
         status: 200
         body:
           is: 'text'
-
-
 
   "JSON Response":
     async: true
@@ -139,8 +138,15 @@ tests:
         body:
           is: !!map { json: true }
 
-  "JSON Response with schema":
+  "JSON Response (From include variable)":
     async: true
+    GET /responses/json:
+      response:
+        status: 200
+        body:
+          is: !!variable json
+
+  "JSON Response with schema":
     GET /responses/json:
       response:
         status: 200

@@ -5,7 +5,6 @@ import url = require('url');
 import util = require('util');
 
 // NPM
-// import jsYaml = require('js-yaml');
 import _ = require('lodash');
 import request = require('supertest');
 import superAgent = require('superagent');
@@ -16,13 +15,10 @@ const pathMatch = require('raml-path-match');
 // Locals
 import { ATL } from './lib/ATL';
 export import ATLHelpers = require('./lib/ATLHelpers');
-
 export import Coverage = require('./lib/Coverage');
-import { generateString as coverageToString } from './lib/RAMLCoverageReporter';
-import { ATLError, CommonAssertions } from './lib/ATLAssertion';
 export import YAML = require('./lib/YAML');
-
 import { RAMLCoverage } from './lib/Coverage';
+export import FileSystem = require('./lib/FileSystem');
 
 
 export interface IBatOptions {
@@ -31,6 +27,7 @@ export interface IBatOptions {
   file?: string;
   raw?: string;
   loadAssets?: boolean;
+  FSResolver?: FileSystem.IFSResolver;
 }
 
 export class Bat {
@@ -43,7 +40,13 @@ export class Bat {
   errors = [];
 
   constructor(public options: IBatOptions = { loadAssets: true }) {
-    this.atl = new ATL();
+    if (!('loadAssets' in options))
+      options.loadAssets = true;
+
+    this.atl = new ATL({
+      FSResolver: options.FSResolver,
+      loadAssets: options.loadAssets
+    });
 
     let gotAST = ATLHelpers.flatPromise();
 
@@ -69,14 +72,22 @@ export class Bat {
     process.chdir(this.path);
     this.file = file;
 
-    this.raw(fs.readFileSync(this.file, 'utf8'));
+    this.raw((this.options.FSResolver || FileSystem.DefaultFileResolver).content(this.file));
   }
 
   raw(content: string) {
     let parsed = YAML.load(content);
 
+    if (this.file) {
+      this.atl.options.file = this.file;
+    }
 
-    this.atl.options.path = this.path || this.file && path.dirname(this.file);
+    if (this.file || this.path) {
+      this.atl.options.path = this.path || this.file && path.dirname(this.file);
+    }
+
+    (this.atl.options.FSResolver as FileSystem.FSResolver).basePath = this.atl.options.path;
+
     this.atl.options.loadAssets = this.options.loadAssets;
     this.atl.fromAST(parsed as any);
 

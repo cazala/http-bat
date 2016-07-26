@@ -52,7 +52,7 @@ export class ATLRequest {
       if ('search' in this.urlObject)
         delete this.urlObject.search;
 
-      let qsParams = cloneObjectUsingPointers(this.test.request.queryParameters, this.test.suite.atl.options.variables);
+      let qsParams = cloneObjectUsingPointers(this.test.request.queryParameters, this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver);
 
       for (let i in qsParams) {
         let typeOfValue = typeof qsParams[i];
@@ -100,7 +100,7 @@ export class ATLRequest {
     // we must send some data..
     if (this.test.request) {
       if (this.test.request.headers) {
-        let headers = cloneObjectUsingPointers(this.test.request.headers, this.test.suite.atl.options.variables);
+        let headers = cloneObjectUsingPointers(this.test.request.headers, this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver);
 
         for (let h in headers) {
           req.set(h, headers[h] == undefined ? '' : headers[h].toString());
@@ -108,7 +108,7 @@ export class ATLRequest {
       }
 
       if (this.test.request.json) {
-        let data = cloneObjectUsingPointers(this.test.request.json, this.test.suite.atl.options.variables);
+        let data = cloneObjectUsingPointers(this.test.request.json, this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver);
         req.send(data);
       }
 
@@ -127,7 +127,7 @@ export class ATLRequest {
         req.type('form');
 
         for (let i in this.test.request.form) {
-          let currentAttachment = cloneObjectUsingPointers(this.test.request.form[i], this.test.suite.atl.options.variables);
+          let currentAttachment = cloneObjectUsingPointers(this.test.request.form[i], this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver);
           req.field(currentAttachment.key, currentAttachment.value);
         }
       }
@@ -142,9 +142,9 @@ export class ATLRequest {
             if (!(holder[x.key] instanceof Array)) {
               holder[x.key] = [holder[x.key]];
             }
-            holder[x.key].push(cloneObjectUsingPointers(x.value, this.test.suite.atl.options.variables));
+            holder[x.key].push(cloneObjectUsingPointers(x.value, this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver));
           } else {
-            holder[x.key] = cloneObjectUsingPointers(x.value, this.test.suite.atl.options.variables);
+            holder[x.key] = cloneObjectUsingPointers(x.value, this.test.suite.atl.options.variables, this.test.suite.atl.options.FSResolver);
           }
         });
 

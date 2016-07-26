@@ -21,14 +21,14 @@ export interface IATLOptions {
   file?: string;
   baseUri?: string;
   baseUriParameters?: ATLHelpers.IDictionary<string>;
-  selfSignedCert: boolean;
-  raml: {
-    coverage: boolean;
-    resourceTypes: boolean;
-    traits: boolean;
+  selfSignedCert?: boolean;
+  raml?: {
+    coverage?: boolean;
+    resourceTypes?: boolean;
+    traits?: boolean;
   };
-  FSResolver: IFSResolver;
-  loadAssets: boolean;
+  FSResolver?: IFSResolver;
+  loadAssets?: boolean;
 }
 
 export class ATL {
@@ -185,6 +185,9 @@ export class ATL {
   constructor(options?: IATLOptions) {
     if (options)
       _.merge(this.options, options);
+
+    if (!('loadAssets' in options))
+      this.options.loadAssets = true;
 
     if (!this.options.FSResolver)
       this.options.FSResolver = new FSResolver(this.options.path);

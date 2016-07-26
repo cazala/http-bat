@@ -34,7 +34,7 @@ class ATLAssertion {
         throw err;
     }
     getObjectValue(object) {
-        return ATLHelpers_1.cloneObjectUsingPointers(object, this.parent.suite.atl.options.variables);
+        return ATLHelpers_1.cloneObjectUsingPointers(object, this.parent.suite.atl.options.variables, this.parent.suite.atl.options.FSResolver);
     }
 }
 exports.ATLAssertion = ATLAssertion;
@@ -132,7 +132,10 @@ var CommonAssertions;
                 else {
                     takenBody = response.body;
                 }
+                console.log(this.parent.suite.name, " BODY IS");
+                console.dir(this.bodyIs);
                 let bodyEquals = this.getObjectValue(this.bodyIs);
+                console.dir(bodyEquals);
                 /* istanbul ignore if */
                 if (!_.isEqual(bodyEquals, takenBody)) {
                     this.error({

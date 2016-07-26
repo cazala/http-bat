@@ -1,9 +1,6 @@
 "use strict";
-// Node
-const fs = require('fs');
 const path = require('path');
 // NPM
-// import jsYaml = require('js-yaml');
 const _ = require('lodash');
 const request = require('supertest');
 const pathMatch = require('raml-path-match');
@@ -13,11 +10,17 @@ exports.ATLHelpers = require('./lib/ATLHelpers');
 exports.Coverage = require('./lib/Coverage');
 exports.YAML = require('./lib/YAML');
 const Coverage_1 = require('./lib/Coverage');
+exports.FileSystem = require('./lib/FileSystem');
 class Bat {
     constructor(options = { loadAssets: true }) {
         this.options = options;
         this.errors = [];
-        this.atl = new ATL_1.ATL();
+        if (!('loadAssets' in options))
+            options.loadAssets = true;
+        this.atl = new ATL_1.ATL({
+            FSResolver: options.FSResolver,
+            loadAssets: options.loadAssets
+        });
         let gotAST = exports.ATLHelpers.flatPromise();
         if (options.raw) {
             this.raw(options.raw);
@@ -38,11 +41,17 @@ class Bat {
         this.path = path.dirname(file);
         process.chdir(this.path);
         this.file = file;
-        this.raw(fs.readFileSync(this.file, 'utf8'));
+        this.raw((this.options.FSResolver || exports.FileSystem.DefaultFileResolver).content(this.file));
     }
     raw(content) {
         let parsed = exports.YAML.load(content);
-        this.atl.options.path = this.path || this.file && path.dirname(this.file);
+        if (this.file) {
+            this.atl.options.file = this.file;
+        }
+        if (this.file || this.path) {
+            this.atl.options.path = this.path || this.file && path.dirname(this.file);
+        }
+        this.atl.options.FSResolver.basePath = this.atl.options.path;
         this.atl.options.loadAssets = this.options.loadAssets;
         this.atl.fromAST(parsed);
         this.updateState();

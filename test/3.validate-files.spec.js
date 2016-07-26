@@ -48,4 +48,4 @@ foundFiles.forEach(file => {
         });
     });
 });
-//# sourceMappingURL=invalid.spec.js.map
+//# sourceMappingURL=3.validate-files.spec.js.map
