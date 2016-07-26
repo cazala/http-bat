@@ -33,7 +33,7 @@ $ npm install http-bat --save-dev
 
 ```typescript
 import { Bat }  from 'http-bat';
-import { registerMochaSuites } from 'http-bat/adapters/mocha';
+import { registerMochaSuites } from 'http-bat/dist/adapters/mocha';
 
 const app = require('../app'); //express server
 

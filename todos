@@ -28,3 +28,9 @@ tests:
       #                  ^
       response:
         status: 201
+
+
+
+
+
+http://httpbin.org/ tests
