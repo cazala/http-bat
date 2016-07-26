@@ -357,4 +357,4 @@ tests:
 [travis-image]: https://travis-ci.org/mulesoft-labs/http-bat.svg?branch=develop&style=flat
 [travis-url]: https://travis-ci.org/mulesoft-labs/http-bat
 [coveralls-image]: https://img.shields.io/coveralls/mulesoft-labs/http-bat.svg?style=flat
-[coveralls-url]: https://coveralls.io/r/mulesoft-labs/raml-generator?branch=develop
+[coveralls-url]: https://coveralls.io/r/mulesoft-labs/http-bat?branch=develop
