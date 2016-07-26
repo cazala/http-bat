@@ -33,6 +33,7 @@ $ npm install http-bat --save-dev
 
 ```javascript
 import { Bat }  from 'http-bat';
+import { registerMochaSuites } from 'http-bat/adapters/mocha';
 
 const app = require('../app'); //express server
 
@@ -40,7 +41,12 @@ const tester = new Bat({
   file: 'test-1.spec.yml'
 });
 
-tester.run(app /* you could provide an URL too */);
+registerMochaSuites(tester); // registers all mocha specs
+
+tester
+  .run(app)
+  .then(() => tester.RAMLCoverage.writeCoverage('info.lcov'))
+
 ```
 
 ### Execute mocha on your project
