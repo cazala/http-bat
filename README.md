@@ -54,7 +54,8 @@ $ mocha
 
 ## Current features
 
-You can read the entire list on [this page](https://github.com/mulesoft-labs/http-bat/wiki/Features)
+You can read the entire list on [this page](https://github.com/mulesoft-labs/http-bat/wiki/Features)  
+[VSCode extension](https://marketplace.visualstudio.com/items?itemName=menduz.http-bat-vscode)
 
 ## Examples
 
