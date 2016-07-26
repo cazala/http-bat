@@ -31,7 +31,7 @@ $ npm install http-bat --save-dev
 
 > `test/api.spec.js` <- mocha spec
 
-```javascript
+```typescript
 import { Bat }  from 'http-bat';
 import { registerMochaSuites } from 'http-bat/adapters/mocha';
 
