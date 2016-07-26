@@ -150,7 +150,8 @@ export class ATL {
               // load string schema by path
               let include = YAMLAstHelpers.readInclude(schemas[sequenceName]);
 
-              let content = include.content(atl.options.FSResolver);
+              let content = atl.options.loadAssets ? include.content(atl.options.FSResolver) : '{}';
+
               try {
                 let schemaBody = JSON.parse(content);
                 // TODO, load schema
