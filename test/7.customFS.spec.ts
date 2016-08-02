@@ -155,9 +155,12 @@ describe('Test custom FSResolver', function () {
 
   this.bail(false);
 
-  registerMochaSuites(instance);
+  let runner = instance.createRunner();
+
+  registerMochaSuites(runner, instance);
 
   it('Must pass', (done) => {
-    instance.run().then(() => done()).catch(x => done(x));
+    runner.run();
+    runner.then(() => done()).catch(x => done(x));
   });
 });

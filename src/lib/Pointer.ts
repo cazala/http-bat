@@ -41,3 +41,6 @@ function constructVariable(data) {
 function resolvePointer(data: YAMLMapping) {
   return (typeof data.value === 'string');
 }
+
+
+export default Pointer;

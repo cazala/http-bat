@@ -1,13 +1,19 @@
-import { ATLTest, cloneObjectUsingPointers, flatPromise, CanceledError } from './ATLHelpers';
+import { cloneObjectUsingPointers, flatPromise } from './ATLHelpers';
 import { inspect } from 'util';
 import { Response } from 'superagent';
 import _ = require('lodash');
 import { Pointer } from './Pointer';
+import ATLTest from './ATLTest';
+
+import { CanceledError } from './Exceptions';
+
+import { Runnable } from './Runnable';
+import ATLRequest from './ATLRequest';
 
 export class ATLError extends Error {
   expected: any;
   actual: any;
-  assertion: ATLAssertion;
+  assertion: ATLResponseAssertion;
   text = '';
   constructor(message: string) {
     super(message);
@@ -24,17 +30,25 @@ export class ATLError extends Error {
   }
 }
 
-export abstract class ATLAssertion {
-  promise: Promise<ATLError>;
+export abstract class ATLResponseAssertion extends Runnable<boolean> {
   name: string;
 
   skip: boolean = false;
 
-  constructor(public parent: ATLTest) {
-    this.promise = Promise.reject(null) as any;
+  constructor(public request: ATLRequest) {
+    super(runnable => {
+      let result: any = this.validate(this.request.value);
+
+      if (!result)
+        return Promise.resolve(true);
+
+      return result;
+    });
+
+    this.addDependency(request);
   }
 
-  error(data: { actual?: any; expected?: any; message: string }) {
+  emitError(data: { actual?: any; expected?: any; message: string }) {
     let message = data.message
       .replace('{actual}', inspect(data.actual))
       .replace('{expected}', inspect(data.expected));
@@ -46,59 +60,17 @@ export abstract class ATLAssertion {
     throw err;
   }
 
+  abstract validate(response: Response): Promise<boolean> | void;
+
   protected getObjectValue(object: any) {
-    return cloneObjectUsingPointers(object, this.parent.suite.atl.options.variables, this.parent.suite.atl.options.FSResolver);
+    return cloneObjectUsingPointers(object, this.request.test.suite.atl.options.variables, this.request.test.suite.atl.options.FSResolver);
   }
-}
-
-export abstract class ATLResponseAssertion extends ATLAssertion {
-  private prom = flatPromise();
-
-  constructor(test: ATLTest) {
-    super(test);
-
-    this.promise = this.prom.promise;
-
-    if (test.skip) {
-      this.prom.rejecter(new CanceledError);
-    } else {
-      test
-        .requester
-        .promise
-        .then(response => {
-          try {
-            let result: any = this.validate(response);
-            if (!result)
-              return this.prom.resolver();
-
-            result.then(() => this.prom.resolver());
-            result.catch(err => this.prom.rejecter(err));
-
-          } catch (err) {
-            err.assertion = this;
-            this.prom.rejecter(err);
-          }
-        });
-
-      // we don't care about IO errors
-      test
-        .requester
-        .promise
-        .catch(err => this.prom.rejecter(err));
-    }
-  }
-
-  cancel() {
-    this.prom.rejecter(new CanceledError);
-  }
-
-  abstract validate(response: Response): Promise<ATLError> | void;
 }
 
 export namespace CommonAssertions {
 
   export class PromiseAssertion extends ATLResponseAssertion {
-    constructor(parent: ATLTest, name: string, public evaluator: (res: Response) => Promise<Error | ATLError | void>) {
+    constructor(parent: ATLRequest, name: string, public evaluator: (res: Response) => Promise<boolean>) {
       super(parent);
       this.name = name;
     }
@@ -111,15 +83,15 @@ export namespace CommonAssertions {
   }
 
   export class StatusCodeAssertion extends ATLResponseAssertion {
-    constructor(parent: ATLTest, public statusCode: number) {
+    constructor(parent: ATLRequest, public statusCode: number) {
       super(parent);
       this.name = "response.status == " + statusCode;
     }
 
     validate(response: Response) {
       if (response.status != this.statusCode) {
-
-        this.error({
+        debugger;
+        this.emitError({
           message: 'expected status code {expected} got {actual} instead',
           expected: this.statusCode,
           actual: response.status
@@ -129,7 +101,7 @@ export namespace CommonAssertions {
   }
 
   export class BodyEqualsAssertion extends ATLResponseAssertion {
-    constructor(parent: ATLTest, public bodyIs: any) {
+    constructor(parent: ATLRequest, public bodyIs: any) {
       super(parent);
       this.name = "response.body is #value";
     }
@@ -138,7 +110,7 @@ export namespace CommonAssertions {
       if (this.bodyIs && typeof this.bodyIs == "object" && this.bodyIs instanceof RegExp) {
         /* istanbul ignore if */
         if (!this.bodyIs.test(response.text)) {
-          this.error({
+          this.emitError({
             message: 'expected response.body to match {expected}, got {actual}',
             expected: this.bodyIs,
             actual: response.text
@@ -157,7 +129,7 @@ export namespace CommonAssertions {
 
         /* istanbul ignore if */
         if (!_.isEqual(bodyEquals, takenBody)) {
-          this.error({
+          this.emitError({
             message: 'expected response.body {expected}, got {actual}',
             expected: bodyEquals,
             actual: takenBody
@@ -169,7 +141,7 @@ export namespace CommonAssertions {
 
 
   export class BodyMatchesAssertion extends ATLResponseAssertion {
-    constructor(parent: ATLTest, public key: string, public value: any) {
+    constructor(parent: ATLRequest, public key: string, public value: any) {
       super(parent);
       this.name = "response.body::" + key;
     }
@@ -184,7 +156,7 @@ export namespace CommonAssertions {
         ||
         ((value instanceof RegExp) && !value.test(readed))
       ) {
-        this.error({
+        this.emitError({
           message: 'expected response.body::' + this.key + ' to match {expected}, got {actual}',
           expected: value,
           actual: readed
@@ -195,29 +167,29 @@ export namespace CommonAssertions {
 
 
   export class CopyBodyValueOperation extends ATLResponseAssertion {
-    constructor(parent: ATLTest, public key: string, public value: Pointer) {
+    constructor(parent: ATLRequest, public key: string, public keyValue: Pointer) {
       super(parent);
-      this.name = "response.body::" + key + " >> !variables " + value.path;
+      this.name = "response.body::" + key + " >> !variables " + keyValue.path;
     }
 
     validate(response: Response) {
       if (this.key === '*') {
-        this.value.set(this.parent.suite.atl.options.variables, response.body);
+        this.keyValue.set(this.request.test.suite.atl.options.variables, response.body);
       } else {
         let takenValue = _.get(response.body, this.key);
-        this.value.set(this.parent.suite.atl.options.variables, takenValue);
+        this.keyValue.set(this.request.test.suite.atl.options.variables, takenValue);
       }
     }
   }
 
   export class ValidateSchemaOperation extends ATLResponseAssertion {
-    constructor(parent: ATLTest, public schema: string) {
+    constructor(parent: ATLRequest, public schema: string) {
       super(parent);
       this.name = "response.body schema " + schema;
     }
 
     validate(response: Response) {
-      let v = this.parent.suite.atl.obtainSchemaValidator(this.schema);
+      let v = this.request.test.suite.atl.obtainSchemaValidator(this.schema);
 
       let validationResult = v(response.body);
 
@@ -226,13 +198,13 @@ export namespace CommonAssertions {
 
         validationResult.errors && validationResult.errors.forEach(x => errors.push("  " + x.stack));
 
-        this.error({ message: errors.join('\n') });
+        this.emitError({ message: errors.join('\n') });
       }
     }
   }
 
   export class HeaderMatchesAssertion extends ATLResponseAssertion {
-    constructor(parent: ATLTest, public header: string, public value: any) {
+    constructor(parent: ATLRequest, public header: string, public value: any) {
       super(parent);
       this.header = header.toLowerCase();
       this.name = "response.header::" + header;
@@ -257,7 +229,7 @@ export namespace CommonAssertions {
         !(value instanceof RegExp) &&
         value !== null
       ) {
-        this.error({
+        this.emitError({
           message: 'readed value of header MUST be string, number or undefined, got {expected} instead. response.header::' + this.header + ' is {actual}',
           expected: value,
           actual: readed
@@ -269,7 +241,7 @@ export namespace CommonAssertions {
         ||
         ((value instanceof RegExp) && !value.test(readed))
       ) {
-        this.error({
+        this.emitError({
           message: 'expected response.header::' + this.header + ' to match {expected}, got {actual}',
           expected: value,
           actual: readed

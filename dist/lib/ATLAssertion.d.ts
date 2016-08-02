@@ -1,71 +1,66 @@
-import { ATLTest } from './ATLHelpers';
 import { Response } from 'superagent';
 import { Pointer } from './Pointer';
+import { Runnable } from './Runnable';
+import ATLRequest from './ATLRequest';
 export declare class ATLError extends Error {
     expected: any;
     actual: any;
-    assertion: ATLAssertion;
+    assertion: ATLResponseAssertion;
     text: string;
     constructor(message: string);
     toString(): string;
     inspect(): string;
 }
-export declare abstract class ATLAssertion {
-    parent: ATLTest;
-    promise: Promise<ATLError>;
+export declare abstract class ATLResponseAssertion extends Runnable<boolean> {
+    request: ATLRequest;
     name: string;
     skip: boolean;
-    constructor(parent: ATLTest);
-    error(data: {
+    constructor(request: ATLRequest);
+    emitError(data: {
         actual?: any;
         expected?: any;
         message: string;
     }): void;
+    abstract validate(response: Response): Promise<boolean> | void;
     protected getObjectValue(object: any): any;
-}
-export declare abstract class ATLResponseAssertion extends ATLAssertion {
-    private prom;
-    constructor(test: ATLTest);
-    cancel(): void;
-    abstract validate(response: Response): Promise<ATLError> | void;
 }
 export declare namespace CommonAssertions {
     class PromiseAssertion extends ATLResponseAssertion {
-        evaluator: (res: Response) => Promise<Error | ATLError | void>;
-        constructor(parent: ATLTest, name: string, evaluator: (res: Response) => Promise<Error | ATLError | void>);
-        validate(response: Response): Promise<Error | ATLError | void>;
+        evaluator: (res: Response) => Promise<boolean>;
+        constructor(parent: ATLRequest, name: string, evaluator: (res: Response) => Promise<boolean>);
+        validate(response: Response): Promise<any>;
     }
     class StatusCodeAssertion extends ATLResponseAssertion {
         statusCode: number;
-        constructor(parent: ATLTest, statusCode: number);
+        constructor(parent: ATLRequest, statusCode: number);
         validate(response: Response): void;
     }
     class BodyEqualsAssertion extends ATLResponseAssertion {
         bodyIs: any;
-        constructor(parent: ATLTest, bodyIs: any);
+        constructor(parent: ATLRequest, bodyIs: any);
         validate(response: Response): void;
     }
     class BodyMatchesAssertion extends ATLResponseAssertion {
         key: string;
         value: any;
-        constructor(parent: ATLTest, key: string, value: any);
+        constructor(parent: ATLRequest, key: string, value: any);
         validate(response: Response): void;
     }
     class CopyBodyValueOperation extends ATLResponseAssertion {
         key: string;
-        value: Pointer;
-        constructor(parent: ATLTest, key: string, value: Pointer);
+        keyValue: Pointer;
+        constructor(parent: ATLRequest, key: string, keyValue: Pointer);
         validate(response: Response): void;
     }
     class ValidateSchemaOperation extends ATLResponseAssertion {
         schema: string;
-        constructor(parent: ATLTest, schema: string);
+        constructor(parent: ATLRequest, schema: string);
         validate(response: Response): void;
     }
     class HeaderMatchesAssertion extends ATLResponseAssertion {
         header: string;
         value: any;
-        constructor(parent: ATLTest, header: string, value: any);
+        constructor(parent: ATLRequest, header: string, value: any);
         validate(response: Response): void;
     }
 }

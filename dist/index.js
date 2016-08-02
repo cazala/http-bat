@@ -1,18 +1,20 @@
 "use strict";
-const path = require('path');
+var path = require('path');
 // NPM
-const _ = require('lodash');
-const request = require('supertest');
-const pathMatch = require('raml-path-match');
+var _ = require('lodash');
+var request = require('supertest');
+var pathMatch = require('raml-path-match');
 // Locals
-const ATL_1 = require('./lib/ATL');
+var ATL_1 = require('./lib/ATL');
 exports.ATLHelpers = require('./lib/ATLHelpers');
 exports.Coverage = require('./lib/Coverage');
 exports.YAML = require('./lib/YAML');
-const Coverage_1 = require('./lib/Coverage');
+var Coverage_1 = require('./lib/Coverage');
 exports.FileSystem = require('./lib/FileSystem');
-class Bat {
-    constructor(options = { loadAssets: true }) {
+var ATLRunner_1 = require('./lib/Runners/ATLRunner');
+var Bat = (function () {
+    function Bat(options) {
+        if (options === void 0) { options = { loadAssets: true }; }
         this.options = options;
         this.errors = [];
         if (!('loadAssets' in options))
@@ -21,7 +23,7 @@ class Bat {
             FSResolver: options.FSResolver,
             loadAssets: options.loadAssets
         });
-        let gotAST = exports.ATLHelpers.flatPromise();
+        var gotAST = exports.ATLHelpers.flatPromise();
         if (options.raw) {
             this.raw(options.raw);
         }
@@ -29,22 +31,22 @@ class Bat {
             this.load(options.file);
         }
     }
-    updateState() {
+    Bat.prototype.updateState = function () {
         if (this.options.variables) {
             _.merge(this.atl.options.variables, this.options.variables);
         }
         if (this.options.baseUri && this.options.baseUri != 'default') {
             this.atl.options.baseUri = this.options.baseUri;
         }
-    }
-    load(file) {
+    };
+    Bat.prototype.load = function (file) {
         this.path = path.dirname(file);
         process.chdir(this.path);
         this.file = file;
         this.raw((this.options.FSResolver || exports.FileSystem.DefaultFileResolver).content(this.file));
-    }
-    raw(content) {
-        let parsed = exports.YAML.load(content);
+    };
+    Bat.prototype.raw = function (content) {
+        var parsed = exports.YAML.load(content);
         if (this.file) {
             this.atl.options.file = this.file;
         }
@@ -60,68 +62,56 @@ class Bat {
         if (this.atl.raml) {
             this.RAMLCoverage = new Coverage_1.RAMLCoverage(this.atl.raml, this.atl);
         }
-    }
-    run(app) {
-        let prom = exports.ATLHelpers.flatPromise();
+    };
+    Bat.prototype.createRunner = function (app) {
+        var _this = this;
+        var prom = exports.ATLHelpers.flatPromise();
         if (this.errors.length) {
-            let errorStr = this.errors.map(exports.YAML.getErrorString).join('\n');
+            var errorStr = this.errors.map(exports.YAML.getErrorString).join('\n');
             throw new Error('Can not run with errors. Found ' + this.errors.length + '\n' + errorStr);
         }
-        try {
-            if (this.atl.options.selfSignedCert) {
-                process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-            }
-            if (this.options.baseUri == 'default')
-                delete this.options.baseUri;
-            if (!app || app === "default" || app === '') {
-                app = this.options.baseUri || this.atl.options.baseUri;
-            }
-            if (!app) {
-                throw new Error("baseUri not specified");
-            }
-            if (typeof app === 'string' && app.substr(-1) === '/') {
-                app = app.substr(0, app.length - 1);
-            }
-            this.atl.agent = request.agent(app);
-            // Run tests
-            let tests = this.allTests();
-            let allDone = [];
-            tests.forEach(test => {
-                let testResult = test.promise;
-                allDone.push(testResult
-                    .then(result => {
-                    return Promise.resolve({
-                        success: true
-                    });
-                })
-                    .catch(result => {
-                    return Promise.resolve({
-                        success: false
-                    });
-                }));
-                if (this.RAMLCoverage && !test.skip) {
-                    testResult.then(() => {
-                        this.RAMLCoverage.registerTestResult(test, {
-                            req: test.requester.superAgentRequest,
-                            res: test.requester.superAgentResponse,
-                            test: test,
-                            url: test.requester.url
-                        });
-                    });
-                }
-            });
-            Promise.all(allDone).then(() => prom.resolver());
-            Object.keys(this.atl.suites).forEach(x => this.atl.suites[x].run());
+        if (this.atl.options.selfSignedCert) {
+            process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
         }
-        catch (e) {
-            prom.rejecter(e);
+        if (this.options.baseUri == 'default')
+            delete this.options.baseUri;
+        if (!app || app === "default" || app === '') {
+            app = this.options.baseUri || this.atl.options.baseUri;
         }
-        return prom.promise;
-    }
-    allTests() {
+        if (!app) {
+            throw new Error("baseUri not specified");
+        }
+        if (typeof app === 'string' && app.substr(-1) === '/') {
+            app = app.substr(0, app.length - 1);
+        }
+        // Run tests
+        var runner = new ATLRunner_1.default(this.atl, request.agent(app));
+        var tests = runner.allTestRunners();
+        tests.forEach(function (test) {
+            if (_this.RAMLCoverage && test.request) {
+                test.request.then(function () {
+                    _this.RAMLCoverage.registerTestResult({
+                        req: test.request.superAgentRequest,
+                        res: test.request.value,
+                        test: test.suite.test,
+                        url: test.request.url,
+                        urlObject: test.request.urlObject
+                    });
+                });
+            }
+        });
+        return runner;
+    };
+    Bat.prototype.run = function (app) {
+        var runner = this.createRunner(app);
+        runner.run();
+        return runner;
+    };
+    Bat.prototype.allTests = function () {
         return this.atl.allTests();
-    }
-}
+    };
+    return Bat;
+}());
 exports.Bat = Bat;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Bat;

@@ -1,11 +1,14 @@
+import url = require('url');
 import request = require('supertest');
 import RAML = require('raml-1-parser');
 import superAgent = require('superagent');
 import { ATL } from './ATL';
 import ATLHelpers = require('./ATLHelpers');
+import ATLTest from './ATLTest';
 export interface ITestResult {
-    test: ATLHelpers.ATLTest;
+    test: ATLTest;
     response: request.Response;
+    urlObject: url.Url;
 }
 export interface ICovData {
     [x: number]: number | void;
@@ -55,7 +58,7 @@ export declare class CoverageResource {
     constructor(resource: RAML.api08.Resource, ramlCoverage: RAMLCoverage);
     resourceAssertion: CoverageAssertion;
     private generateAssertions();
-    resolve(test: ATLHelpers.ATLTest, response: request.Response): void;
+    resolve(test: ATLTest, response: request.Response, urlObject: url.Url): void;
     registerCoverageLineOnData(lineData: {
         file: string;
         line: number;
@@ -86,22 +89,12 @@ export declare class RAMLCoverage {
     coverageData: CoverageData;
     constructor(raml: RAML.api08.Api | RAML.api10.Api, atl: ATL);
     private peekResource(resource, parent?);
-    registerTestResult(test: ATLHelpers.ATLTest, ctx: {
+    registerTestResult(ctx: {
         req: superAgent.SuperAgentRequest;
         res: superAgent.Response;
-        test: ATLHelpers.ATLTest;
+        test: ATLTest;
         url: string;
+        urlObject: url.Url;
     }): void;
     writeCoverage(coverFile: string): void;
-}
-export declare class CoverageError extends Error {
-}
-export declare class NotImplementedError extends CoverageError {
-    constructor(message: string);
-}
-export declare class OptionalError extends CoverageError {
-    constructor(message: string);
-}
-export declare class NoMatchingResults extends NotImplementedError {
-    constructor();
 }

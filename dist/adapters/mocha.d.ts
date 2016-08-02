@@ -1,2 +1,3 @@
 import { Bat } from '../index';
-export declare function registerMochaSuites(bat: Bat): void;
+import ATLRunner from '../lib/Runners/ATLRunner';
+export declare function registerMochaSuites(runner: ATLRunner, bat: Bat): void;

@@ -1,8 +1,9 @@
 import ATLHelpers = require('./ATLHelpers');
 import RAML = require('raml-1-parser');
-import { SuperAgent, SuperAgentRequest } from 'superagent';
 import { ASTParser } from './YAML';
 import { IFSResolver } from './FileSystem';
+import ATLTest from './ATLTest';
+import ATLSuite from './ATLSuite';
 export interface IATLOptions {
     variables?: ATLHelpers.IDictionary<any>;
     path?: string;
@@ -29,12 +30,11 @@ export declare class ATL {
     };
     options: IATLOptions;
     constructor(options?: IATLOptions);
-    agent: SuperAgent<SuperAgentRequest>;
     raml: RAML.api08.Api | RAML.api10.Api;
-    suites: ATLHelpers.IDictionary<ATLHelpers.ATLSuite>;
+    suites: ATLHelpers.IDictionary<ATLSuite>;
     schemas: ATLHelpers.IDictionary<any>;
     errors: any[];
-    allTests(): ATLHelpers.ATLTest[];
+    allTests(): ATLTest[];
     fromAST(astRoot: ASTParser.YAMLNode): void;
     obtainSchemaValidator(schema: any): (content: any) => {
         valid: boolean;
@@ -43,3 +43,4 @@ export declare class ATL {
     private replaceSchema(test);
     private _addSchema(schemaName, schema);
 }
+export default ATL;

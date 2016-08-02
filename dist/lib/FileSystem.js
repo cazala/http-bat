@@ -1,12 +1,12 @@
 "use strict";
-const fs = require('fs');
-const path_1 = require('path');
-class FSResolver {
-    constructor(basePath) {
+var fs = require('fs');
+var path_1 = require('path');
+var FSResolver = (function () {
+    function FSResolver(basePath) {
         this.basePath = basePath;
         this.basePath = basePath || '';
     }
-    content(path) {
+    FSResolver.prototype.content = function (path) {
         if (typeof path != "string") {
             path = "" + path;
         }
@@ -22,34 +22,38 @@ class FSResolver {
             console.log(e);
             return null;
         }
-    }
-    contentAsync(path) {
+    };
+    FSResolver.prototype.contentAsync = function (path) {
         return new Promise(function (resolve, reject) {
             fs.readFile(path, function (err, data) {
                 if (err != null) {
                     return reject(err);
                 }
-                let content = data.toString();
+                var content = data.toString();
                 resolve(content);
             });
         });
-    }
-}
+    };
+    return FSResolver;
+}());
 exports.FSResolver = FSResolver;
 exports.DefaultFileResolver = new FSResolver;
-class IncludedFile {
-    constructor(path) {
+var IncludedFile = (function () {
+    function IncludedFile(path) {
         this.path = path;
     }
-    content(fsResolver = exports.DefaultFileResolver) {
+    IncludedFile.prototype.content = function (fsResolver) {
+        if (fsResolver === void 0) { fsResolver = exports.DefaultFileResolver; }
         return fsResolver.content(this.path);
-    }
-    contentAsync(fsResolver = exports.DefaultFileResolver) {
+    };
+    IncludedFile.prototype.contentAsync = function (fsResolver) {
+        if (fsResolver === void 0) { fsResolver = exports.DefaultFileResolver; }
         return fsResolver.contentAsync(this.path);
-    }
-    static getInstance(path) {
+    };
+    IncludedFile.getInstance = function (path) {
         return new IncludedFile(path);
-    }
-}
+    };
+    return IncludedFile;
+}());
 exports.IncludedFile = IncludedFile;
 //# sourceMappingURL=FileSystem.js.map

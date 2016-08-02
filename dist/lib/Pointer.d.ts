@@ -7,3 +7,4 @@ export declare class Pointer {
     toString(): string;
 }
 export declare const type: any;
+export default Pointer;

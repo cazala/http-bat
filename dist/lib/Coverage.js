@@ -1,27 +1,28 @@
 "use strict";
 // Node
-const fs = require('fs');
-const path = require('path');
-const url = require('url');
-const util = require('util');
-// NPM
-const _ = require('lodash');
-const jsonschema = require('jsonschema');
-const pathMatch = require('raml-path-match');
-const ATLHelpers = require('./ATLHelpers');
-const RAMLCoverageReporter_1 = require('../lib/RAMLCoverageReporter');
-class CoverageData {
-    constructor() {
+var fs = require('fs');
+var path = require('path');
+var url = require('url');
+var util = require('util');
+var jsonschema = require('jsonschema');
+var pathMatch = require('raml-path-match');
+var ATLHelpers = require('./ATLHelpers');
+var RAMLCoverageReporter_1 = require('../lib/RAMLCoverageReporter');
+var Exceptions_1 = require('./Exceptions');
+var CoverageData = (function () {
+    function CoverageData() {
         this.data = {};
     }
-}
+    return CoverageData;
+}());
 exports.CoverageData = CoverageData;
 exports.GlobalCoverageDataCollector = new CoverageData();
-let theGlobalObject = global;
+var theGlobalObject = global;
 theGlobalObject._$jscoverage = exports.GlobalCoverageDataCollector.data;
 theGlobalObject._$jscoverage = exports.GlobalCoverageDataCollector.data;
-class CoverageAssertion {
-    constructor(name, validationFn, lowLevelAST) {
+var CoverageAssertion = (function () {
+    function CoverageAssertion(name, validationFn, lowLevelAST) {
+        var _this = this;
         this.name = name;
         this.validationFn = validationFn;
         this.lowLevelAST = lowLevelAST;
@@ -30,21 +31,21 @@ class CoverageAssertion {
         /// Resolves when the validation is OK
         this.promise = ATLHelpers.flatPromise();
         this.promise.promise
-            .then(x => {
+            .then(function (x) {
             if (x) {
-                this.error = x;
-                this.valid = false;
+                _this.error = x;
+                _this.valid = false;
                 return Promise.reject(x);
             }
             else {
-                delete this.error;
-                this.valid = true;
+                delete _this.error;
+                _this.valid = true;
                 return Promise.resolve();
             }
         })
-            .catch(x => {
-            this.error = x;
-            this.valid = false;
+            .catch(function (x) {
+            _this.error = x;
+            _this.valid = false;
             return Promise.reject(x);
         });
         if (lowLevelAST) {
@@ -57,7 +58,7 @@ class CoverageAssertion {
             }
         }
     }
-    getCoverage() {
+    CoverageAssertion.prototype.getCoverage = function () {
         if (this.src_file) {
             return {
                 file: this.src_file,
@@ -68,31 +69,32 @@ class CoverageAssertion {
                 covered: this.valid
             };
         }
-    }
-    validate(res) {
-        let waitForInner = Promise.resolve();
+    };
+    CoverageAssertion.prototype.validate = function (res) {
+        var _this = this;
+        var waitForInner = Promise.resolve();
         try {
             if (!res || !res.length) {
-                throw new NoMatchingResults;
+                throw new Exceptions_1.NoMatchingResults;
             }
             if (this.validationFn) {
-                let actualResult = this.validationFn(res);
+                var actualResult = this.validationFn(res);
                 if (actualResult) {
                     if (!(actualResult instanceof Promise)) {
                         this.promise.rejecter(new Error(this.name + " does not return a Promise, got " + util.inspect(actualResult)));
                     }
                     else {
                         actualResult
-                            .then(result => {
+                            .then(function (result) {
                             if (result) {
-                                this.promise.rejecter(result);
+                                _this.promise.rejecter(result);
                             }
                             else {
-                                this.promise.resolver();
+                                _this.promise.resolver();
                             }
                         })
-                            .catch(err => {
-                            this.promise.rejecter(err);
+                            .catch(function (err) {
+                            _this.promise.rejecter(err);
                         });
                     }
                 }
@@ -108,17 +110,18 @@ class CoverageAssertion {
             this.promise.rejecter(e);
         }
         if (this.innerAssertions.length) {
-            waitForInner = Promise.all(this.innerAssertions.map(x => x.validate(res)));
+            waitForInner = Promise.all(this.innerAssertions.map(function (x) { return x.validate(res); }));
         }
         // THIS METOD MUST RESOLVE EVERY TIME
         return this.promise.promise
-            .then(error => waitForInner.then(() => error))
-            .catch(error => waitForInner.then(() => Promise.resolve(error)));
-    }
-}
+            .then(function (error) { return waitForInner.then(function () { return error; }); })
+            .catch(function (error) { return waitForInner.then(function () { return Promise.resolve(error); }); });
+    };
+    return CoverageAssertion;
+}());
 exports.CoverageAssertion = CoverageAssertion;
-class CoverageResource {
-    constructor(resource, ramlCoverage) {
+var CoverageResource = (function () {
+    function CoverageResource(resource, ramlCoverage) {
         this.resource = resource;
         this.ramlCoverage = ramlCoverage;
         this.results = [];
@@ -127,73 +130,42 @@ class CoverageResource {
         this.uriParameters = [];
         this.relativeUrl = resource.completeRelativeUri();
         try {
-            this.uriParameters = resource.absoluteUriParameters().map(x => x.toJSON());
+            this.uriParameters = resource.absoluteUriParameters().map(function (x) { return x.toJSON(); });
         }
         catch (e) {
         }
-        this.matches = pathMatch(this.relativeUrl, this.uriParameters);
+        var matcher = pathMatch(this.relativeUrl, this.uriParameters);
+        this.matches = matcher;
         this.generateAssertions();
     }
-    generateAssertions() {
+    CoverageResource.prototype.generateAssertions = function () {
+        var _this = this;
         this.resourceAssertion = new CoverageAssertion(this.resource.completeRelativeUri());
-        let methods = [];
-        let type = this.resource.type();
+        var methods = [];
+        var type = this.resource.type();
         methods = methods.concat(this.resource.methods());
-        methods.forEach(method => {
-            let methodName = method.method().toUpperCase();
-            let methodJson = method.toJSON();
-            let methodAssetions = new CoverageAssertion(methodName, null, method.highLevel().lowLevel());
-            this.resourceAssertion.innerAssertions.push(methodAssetions);
-            let responses = [];
-            let flatQueryParameters = {};
-            // if (this.bat.ast.options.raml.traits) {
-            let traits = method.is();
-            for (let traitIndex = 0; traitIndex < traits.length; traitIndex++) {
-                let trait = traits[traitIndex];
-                let traitJSON = trait.trait().toJSON();
-                let traitName = trait.name();
-                if (traitJSON[traitName].queryParameters) {
-                    for (let name in traitJSON[traitName].queryParameters) {
-                        let param = traitJSON[traitName].queryParameters[name];
-                        flatQueryParameters[param.name] = flatQueryParameters[param.name] || {};
-                        _.merge(flatQueryParameters[param.name], param);
-                    }
-                }
-                responses = responses.concat(trait.trait().responses());
-            }
-            // }
-            // if (this.bat.ast.options.raml.resourceTypes) {
-            if (type) {
-                let typeMethods = type.resourceType().methods();
-                typeMethods = typeMethods.filter(x => x.method().toUpperCase() == method.method().toUpperCase());
-                typeMethods.forEach(m => {
-                    let typeMethodJson = m.toJSON()[m.method().toLowerCase()];
-                    if (typeMethodJson.queryParameters) {
-                        for (let name in typeMethodJson.queryParameters) {
-                            let param = typeMethodJson.queryParameters[name];
-                            flatQueryParameters[param.name] = flatQueryParameters[param.name] || {};
-                            _.merge(flatQueryParameters[param.name], param);
-                        }
-                    }
-                    responses = responses.concat(m.responses());
-                });
-            }
-            // }
+        methods.forEach(function (method) {
+            var methodName = method.method().toUpperCase();
+            var methodJson = method.toJSON();
+            var methodAssetions = new CoverageAssertion(methodName, null, method.highLevel().lowLevel());
+            _this.resourceAssertion.innerAssertions.push(methodAssetions);
+            var responses = [];
+            var flatQueryParameters = {};
             responses = responses.concat(method.responses());
-            let flatResponses = {};
-            responses.forEach(x => {
-                let key = x.code().value();
-                let flatResponse = flatResponses[key] = flatResponses[key] || {};
+            var flatResponses = {};
+            responses.forEach(function (x) {
+                var key = x.code().value();
+                var flatResponse = flatResponses[key] = flatResponses[key] || {};
                 flatResponse.status = key;
                 flatResponse.statusAST = x.code().highLevel().lowLevel();
-                x.headers().forEach(h => {
+                x.headers().forEach(function (h) {
                     flatResponse.headers = flatResponse.headers || {};
                     flatResponse.headers[h.name()] = h || flatResponse.headers[h.name()];
                 });
                 flatResponse.bodies = {};
-                x.body().forEach(h => {
-                    let contentType = h.name();
-                    let body = flatResponse.bodies[contentType] = flatResponse.bodies[contentType] || {
+                x.body().forEach(function (h) {
+                    var contentType = h.name();
+                    var body = flatResponse.bodies[contentType] = flatResponse.bodies[contentType] || {
                         contentType: contentType
                     };
                     body.contentTypeAST = h.highLevel().lowLevel();
@@ -205,103 +177,117 @@ class CoverageResource {
             });
             if (Object.keys(flatQueryParameters).length) {
                 Object.keys(flatQueryParameters)
-                    .map(key => flatQueryParameters[key])
-                    .forEach(qp => {
-                    methodAssetions.innerAssertions.push(new CoverageAssertion('request.queryParameter::' + qp.name + ' must be present on some call', (results) => {
-                        if (!results.some(x => x.test.method.toUpperCase() == methodName
-                            &&
-                                (qp.name in x.test.requester.urlObject.query)))
-                            throw new (qp.required ? Error : NotImplementedError)("Query parameter not covered. Found permutations: " + util.inspect(results.map(x => x.test.requester.urlObject.query)));
+                    .map(function (key) { return flatQueryParameters[key]; })
+                    .forEach(function (qp) {
+                    methodAssetions.innerAssertions.push(new CoverageAssertion('request.queryParameter::' + qp.name + ' must be present on some call', function (results) {
+                        if (!results.some(function (x) {
+                            return x.test.method.toUpperCase() == methodName
+                                &&
+                                    (qp.name in x.urlObject.query);
+                        }))
+                            throw new (qp.required ? Error : Exceptions_1.NotImplementedError)("Query parameter not covered. Found permutations: " + util.inspect(results.map(function (x) { return x.urlObject.query; })));
                     }));
-                    methodAssetions.innerAssertions.push(new CoverageAssertion('request.queryParameter::' + qp.name + ' must not be present on some call', (results) => {
-                        if (!results.some(x => x.test.method.toUpperCase() == methodName
-                            &&
-                                !(qp.name in x.test.requester.urlObject.query)))
-                            throw new NotImplementedError("Missing queryParameter not covered. Found permutations: " + util.inspect(results.map(x => x.test.requester.urlObject.query)));
+                    methodAssetions.innerAssertions.push(new CoverageAssertion('request.queryParameter::' + qp.name + ' must not be present on some call', function (results) {
+                        if (!results.some(function (x) {
+                            return x.test.method.toUpperCase() == methodName
+                                &&
+                                    !(qp.name in x.urlObject.query);
+                        }))
+                            throw new Exceptions_1.NotImplementedError("Missing queryParameter not covered. Found permutations: " + util.inspect(results.map(function (x) { return x.urlObject.query; })));
                     }));
                 });
             }
             if (responses.length == 0) {
-                methodAssetions.innerAssertions.push(new CoverageAssertion('should have been called', (results) => {
-                    if (!results.some(x => x.test.method.toUpperCase() == methodName))
-                        throw new NoMatchingResults;
+                methodAssetions.innerAssertions.push(new CoverageAssertion('should have been called', function (results) {
+                    if (!results.some(function (x) { return x.test.method.toUpperCase() == methodName; }))
+                        throw new Exceptions_1.NoMatchingResults;
                 }));
             }
             else {
-                Object.keys(flatResponses).map(x => parseInt(x)).forEach(statusCode => {
-                    let response = flatResponses[statusCode];
-                    methodAssetions.innerAssertions.push(new CoverageAssertion('check ' + statusCode + ' response', (results) => {
-                        let responses = results.filter(x => x.test.response.status == statusCode
-                            &&
-                                x.test.method.toUpperCase() == methodName);
+                Object.keys(flatResponses).map(function (x) { return parseInt(x); }).forEach(function (statusCode) {
+                    var response = flatResponses[statusCode];
+                    methodAssetions.innerAssertions.push(new CoverageAssertion('check ' + statusCode + ' response', function (results) {
+                        var responses = results.filter(function (x) {
+                            return x.test.response.status == statusCode
+                                &&
+                                    x.test.method.toUpperCase() == methodName;
+                        });
                         if (!responses.length) {
-                            throw new NotImplementedError('status code ' + statusCode + ' not covered');
+                            throw new Exceptions_1.NotImplementedError('status code ' + statusCode + ' not covered');
                         }
                         else {
-                            responses.forEach(x => {
+                            responses.forEach(function (x) {
                                 if (x.response.status != statusCode)
-                                    throw new CoverageError('unexpected response.status: ' + x.response.status);
+                                    throw new Exceptions_1.CoverageError('unexpected response.status: ' + x.response.status);
                             });
                         }
                     }, response.statusAST));
-                    let allBodies = Object.keys(response.bodies);
-                    let responseAssertion = new CoverageAssertion(statusCode.toString());
+                    var allBodies = Object.keys(response.bodies);
+                    var responseAssertion = new CoverageAssertion(statusCode.toString());
                     methodAssetions.innerAssertions.push(responseAssertion);
-                    allBodies.forEach(contentType => {
-                        let bodyAsserion = new CoverageAssertion(contentType);
-                        let actualBody = response.bodies[contentType];
+                    allBodies.forEach(function (contentType) {
+                        var bodyAsserion = new CoverageAssertion(contentType);
+                        var actualBody = response.bodies[contentType];
                         responseAssertion.innerAssertions.push(bodyAsserion);
-                        bodyAsserion.innerAssertions.push(new CoverageAssertion('response.headers::content-type == ' + contentType, (results) => {
-                            let responses = results.filter(x => x.test.response.status == statusCode
-                                &&
-                                    x.test.method.toUpperCase() == methodName);
+                        bodyAsserion.innerAssertions.push(new CoverageAssertion('response.headers::content-type == ' + contentType, function (results) {
+                            var responses = results.filter(function (x) {
+                                return x.test.response.status == statusCode
+                                    &&
+                                        x.test.method.toUpperCase() == methodName;
+                            });
                             if (!responses.length) {
-                                throw new NotImplementedError('status code ' + statusCode + ' not covered');
+                                throw new Exceptions_1.NotImplementedError('status code ' + statusCode + ' not covered');
                             }
-                            let withHeader = responses.filter(x => (x.response.get('content-type') || '').toLowerCase().indexOf(contentType.toLowerCase()) == 0);
+                            var withHeader = responses.filter(function (x) {
+                                return (x.response.get('content-type') || '').toLowerCase().indexOf(contentType.toLowerCase()) == 0;
+                            });
                             if (!withHeader.length) {
-                                throw new NotImplementedError('content-type "' + contentType + '" not covered, covered cases: [ '
-                                    + (responses.filter(x => x.test.request.headers && x.test.request.headers['content-type']).map(x => x.test.request.headers['content-type']).join(' | ') || 'NONE')
-                                    + ' ] received [ ' + responses.map(x => x.response.get('content-type') || 'undefined') + ' ]');
+                                throw new Exceptions_1.NotImplementedError('content-type "' + contentType + '" not covered, covered cases: [ '
+                                    + (responses.filter(function (x) { return x.test.request.headers && x.test.request.headers['content-type']; }).map(function (x) { return x.test.request.headers['content-type']; }).join(' | ') || 'NONE')
+                                    + ' ] received [ ' + responses.map(function (x) { return x.response.get('content-type') || 'undefined'; }) + ' ]');
                             }
                         }, actualBody.contentTypeAST));
                         if (actualBody.schemaString) {
-                            let v = this.ramlCoverage.atl.obtainSchemaValidator(actualBody.schemaString);
-                            bodyAsserion.innerAssertions.push(new CoverageAssertion('response.body schema', (results) => {
-                                let responses = results.filter(x => x.test.response.status == statusCode
-                                    &&
-                                        x.test.method.toUpperCase() == methodName
-                                    &&
-                                        (x.response.get('content-type') || '').toLowerCase().indexOf(contentType.toLowerCase()) == 0);
+                            var v_1 = _this.ramlCoverage.atl.obtainSchemaValidator(actualBody.schemaString);
+                            bodyAsserion.innerAssertions.push(new CoverageAssertion('response.body schema', function (results) {
+                                var responses = results.filter(function (x) {
+                                    return x.test.response.status == statusCode
+                                        &&
+                                            x.test.method.toUpperCase() == methodName
+                                        &&
+                                            (x.response.get('content-type') || '').toLowerCase().indexOf(contentType.toLowerCase()) == 0;
+                                });
                                 if (!responses.length)
-                                    throw new NoMatchingResults;
-                                responses.forEach(x => {
-                                    let validationResult = v(x.response.body);
+                                    throw new Exceptions_1.NoMatchingResults;
+                                responses.forEach(function (x) {
+                                    var validationResult = v_1(x.response.body);
                                     if (!validationResult.valid) {
-                                        throw new CoverageError((validationResult.errors && validationResult.errors.map(x => "  " + x.stack)).join('\n') || "Invalid schema");
+                                        throw new Exceptions_1.CoverageError((validationResult.errors && validationResult.errors.map(function (x) { return "  " + x.stack; })).join('\n') || "Invalid schema");
                                     }
                                 });
                             }, actualBody.schema.highLevel().lowLevel()));
                         }
                     });
                     if (response.headers) {
-                        let headers = Object.keys(response.headers);
-                        headers.forEach(headerKey => {
-                            let headerObject = response.headers[headerKey];
+                        var headers = Object.keys(response.headers);
+                        headers.forEach(function (headerKey) {
+                            var headerObject = response.headers[headerKey];
                             headerKey = headerKey.toLowerCase();
-                            methodAssetions.innerAssertions.push(new CoverageAssertion('response.headers::' + headerKey, (results) => {
-                                let responses = results.filter(x => x.test.response.status == statusCode
-                                    &&
-                                        x.test.method.toUpperCase() == methodName);
+                            methodAssetions.innerAssertions.push(new CoverageAssertion('response.headers::' + headerKey, function (results) {
+                                var responses = results.filter(function (x) {
+                                    return x.test.response.status == statusCode
+                                        &&
+                                            x.test.method.toUpperCase() == methodName;
+                                });
                                 if (!responses.length)
-                                    throw new NoMatchingResults;
-                                responses.forEach(x => {
-                                    let receivedHeaders = Object.keys(x.response.header).map(x => x.toLowerCase());
+                                    throw new Exceptions_1.NoMatchingResults;
+                                responses.forEach(function (x) {
+                                    var receivedHeaders = Object.keys(x.response.header).map(function (x) { return x.toLowerCase(); });
                                     if (receivedHeaders.indexOf(headerKey) == -1)
                                         if (headerObject.optional())
-                                            throw new OptionalError(headerKey + " header not received (Optional)");
+                                            throw new Exceptions_1.OptionalError(headerKey + " header not received (Optional)");
                                         else
-                                            throw new CoverageError(headerKey + " header not received");
+                                            throw new Exceptions_1.CoverageError(headerKey + " header not received");
                                 });
                             }, headerObject.highLevel().lowLevel()));
                         });
@@ -309,14 +295,15 @@ class CoverageResource {
                 });
             }
         });
-    }
-    resolve(test, response) {
+    };
+    CoverageResource.prototype.resolve = function (test, response, urlObject) {
         this.results.push({
             test: test,
-            response: response
+            response: response,
+            urlObject: urlObject
         });
-    }
-    registerCoverageLineOnData(lineData, cov) {
+    };
+    CoverageResource.prototype.registerCoverageLineOnData = function (lineData, cov) {
         if (!cov.data[lineData.file]) {
             cov.data[lineData.file] = { source: [] };
             try {
@@ -325,7 +312,7 @@ class CoverageResource {
             catch (e) {
             }
         }
-        let data = cov.data[lineData.file];
+        var data = cov.data[lineData.file];
         if (lineData.line >= 0) {
             while ((lineData.line + 1) > data.source.length) {
                 data.source.push(undefined);
@@ -337,22 +324,23 @@ class CoverageResource {
         else {
             data[lineData.line] = data[lineData.line] || 0;
         }
-    }
-    registerCoverageLine(lineData) {
+    };
+    CoverageResource.prototype.registerCoverageLine = function (lineData) {
         this.registerCoverageLineOnData(lineData, this.ramlCoverage.coverageData);
         this.registerCoverageLineOnData(lineData, exports.GlobalCoverageDataCollector);
-    }
-    getCoverage() {
-        let prom = ATLHelpers.flatPromise();
-        let total = 0;
-        let notCovered = 0;
-        let errored = 0;
-        let lines = 0;
-        const walk = (assertion) => {
+    };
+    CoverageResource.prototype.getCoverage = function () {
+        var _this = this;
+        var prom = ATLHelpers.flatPromise();
+        var total = 0;
+        var notCovered = 0;
+        var errored = 0;
+        var lines = 0;
+        var walk = function (assertion) {
             if (assertion.validationFn) {
                 total++;
                 if (!assertion.valid) {
-                    if (assertion.error && (assertion.error instanceof NotImplementedError)) {
+                    if (assertion.error && (assertion.error instanceof Exceptions_1.NotImplementedError)) {
                         notCovered++;
                     }
                     else {
@@ -360,17 +348,17 @@ class CoverageResource {
                     }
                 }
             }
-            let coverageResult = assertion.getCoverage();
+            var coverageResult = assertion.getCoverage();
             if (coverageResult) {
-                this.registerCoverageLine(coverageResult);
+                _this.registerCoverageLine(coverageResult);
                 lines += coverageResult.lineEnd - coverageResult.line + 1;
             }
             if (assertion.innerAssertions.length) {
-                assertion.innerAssertions.forEach(x => walk(x));
+                assertion.innerAssertions.forEach(function (x) { return walk(x); });
             }
         };
-        const calculateCoverage = () => {
-            walk(this.resourceAssertion);
+        var calculateCoverage = function () {
+            walk(_this.resourceAssertion);
             prom.resolver({
                 total: total,
                 errored: errored,
@@ -379,44 +367,46 @@ class CoverageResource {
         };
         this.resourceAssertion.promise.promise.then(calculateCoverage).catch(calculateCoverage);
         return prom.promise;
-    }
-    run() {
+    };
+    CoverageResource.prototype.run = function () {
         return this.resourceAssertion.validate(this.results);
-    }
-}
+    };
+    return CoverageResource;
+}());
 exports.CoverageResource = CoverageResource;
-class RAMLCoverage {
-    constructor(raml, atl) {
+var RAMLCoverage = (function () {
+    function RAMLCoverage(raml, atl) {
         this.raml = raml;
         this.atl = atl;
         this.coverageElements = [];
         this.coverageData = new CoverageData;
-        let resources = raml.expand().resources();
-        for (let r in resources) {
+        var resources = raml.expand().resources();
+        for (var r in resources) {
             this.peekResource(resources[r]);
         }
     }
-    peekResource(resource, parent) {
-        let thisUrl = (parent || "") + resource.relativeUri().value();
+    RAMLCoverage.prototype.peekResource = function (resource, parent) {
+        var thisUrl = (parent || "") + resource.relativeUri().value();
         this.coverageElements.push(new CoverageResource(resource, this));
-        let resources = resource.resources();
-        for (let r in resources) {
+        var resources = resource.resources();
+        for (var r in resources) {
             this.peekResource(resources[r], thisUrl);
         }
-    }
-    registerTestResult(test, ctx) {
-        this.coverageElements.forEach(coverageElement => {
-            let matchPart = url.parse(ctx.url);
+    };
+    RAMLCoverage.prototype.registerTestResult = function (ctx) {
+        this.coverageElements.forEach(function (coverageElement) {
+            var matchPart = url.parse(ctx.url);
             if (coverageElement.matches(matchPart.pathname)) {
-                coverageElement.resolve(ctx.test, ctx.res);
+                coverageElement.resolve(ctx.test, ctx.res, ctx.urlObject);
             }
         });
-    }
-    writeCoverage(coverFile) {
-        let cwd = path.dirname(coverFile);
+    };
+    RAMLCoverage.prototype.writeCoverage = function (coverFile) {
+        var _this = this;
+        var cwd = path.dirname(coverFile);
         if (this.coverageData && this.coverageData.data && Object.keys(this.coverageData.data).length) {
             console.info("Writing coverage information: " + coverFile);
-            let coverage = '';
+            var coverage = '';
             try {
                 fs.mkdirSync(cwd);
             }
@@ -430,9 +420,9 @@ class RAMLCoverage {
                 coverage = coverage + '\n';
             coverage =
                 coverage += Object.keys(this.coverageData.data)
-                    .filter(x => !!x && !!this.coverageData.data[x])
-                    .map((file) => {
-                    let data = this.coverageData.data[file];
+                    .filter(function (x) { return !!x && !!_this.coverageData.data[x]; })
+                    .map(function (file) {
+                    var data = _this.coverageData.data[file];
                     console.info('  Writing ' + file + ' coverage.');
                     return RAMLCoverageReporter_1.generateString(file, data);
                 }).join('\n');
@@ -440,32 +430,8 @@ class RAMLCoverage {
             this.coverageData.data = {};
             console.info("Writing coverage information. OK!");
         }
-    }
-}
+    };
+    return RAMLCoverage;
+}());
 exports.RAMLCoverage = RAMLCoverage;
-class CoverageError extends Error {
-}
-exports.CoverageError = CoverageError;
-class NotImplementedError extends CoverageError {
-    constructor(message) {
-        super(message);
-        this.message = message;
-        this.name = "Method not implemented";
-    }
-}
-exports.NotImplementedError = NotImplementedError;
-class OptionalError extends CoverageError {
-    constructor(message) {
-        super(message);
-        this.message = message;
-        this.name = "Optional Error";
-    }
-}
-exports.OptionalError = OptionalError;
-class NoMatchingResults extends NotImplementedError {
-    constructor() {
-        super("No matching results");
-    }
-}
-exports.NoMatchingResults = NoMatchingResults;
 //# sourceMappingURL=Coverage.js.map

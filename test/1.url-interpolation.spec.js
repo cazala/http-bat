@@ -1,9 +1,9 @@
 "use strict";
-const Interpolation = require('./../dist/lib/Interpolation');
-const MustFullfilInterpolation = (text, store, expected) => {
+var Interpolation = require('./../dist/lib/Interpolation');
+var MustFullfilInterpolation = function (text, store, expected) {
     it("Must fullfill interpolation " + text, function () {
-        let r = Interpolation.interpolateString(text, store);
-        let error;
+        var r = Interpolation.interpolateString(text, store);
+        var error;
         try {
             Interpolation.ensureAllInterpolations(r);
         }
@@ -20,21 +20,21 @@ const MustFullfilInterpolation = (text, store, expected) => {
         }
     });
 };
-const MustPartiallyFullfillInterpolation = (text, store, expected) => {
+var MustPartiallyFullfillInterpolation = function (text, store, expected) {
     it("Must partially fullfill interpolation " + text, function () {
-        let r = Interpolation.interpolateString(text, store);
+        var r = Interpolation.interpolateString(text, store);
         if (expected != r) {
-            let r = new Error("Failed on string interpolation");
-            r.actual = r;
-            r.expected = expected;
-            throw r;
+            var r_1 = new Error("Failed on string interpolation");
+            r_1.actual = r_1;
+            r_1.expected = expected;
+            throw r_1;
         }
     });
 };
-describe("Url interpolation", () => {
-    it("must not parse anything", () => {
+describe("Url interpolation", function () {
+    it("must not parse anything", function () {
         Interpolation.ensureAllInterpolations("/url");
-        Interpolation.ensureAllInterpolations(`/url/\\{test}/teta`);
+        Interpolation.ensureAllInterpolations("/url/\\{test}/teta");
     });
     MustFullfilInterpolation("{a}", { a: "1" }, "1");
     MustFullfilInterpolation("{a}", { a: true }, "true");

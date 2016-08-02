@@ -10,9 +10,10 @@ import Schema = require('yaml-ast-parser/dist/schema');
 import { IDictionary } from './ATLHelpers';
 
 import YAMLError = require('yaml-ast-parser/dist/exception');
-import Mark = require('yaml-ast-parser/dist/mark');
 
 import { IncludedFile } from './FileSystem';
+
+import { NodeError } from './Exceptions';
 
 /// ---
 
@@ -356,22 +357,5 @@ export namespace YAMLAstHelpers {
     new NodeError((node.parent && node.parent.key && node.parent.key.value || node.parent.value).toString() + " must be any of [" + types.map((x: any) => x && x.displayName || x && x.name || x.toString()).join(" | ") + "]", node);
 
     return false;
-  }
-}
-
-export class NodeError extends Error {
-  start: number;
-  end: number;
-
-  constructor(message: string, public node: ASTParser.YAMLNode) {
-    super(message);
-    this.message = message;
-    this.start = node.startPosition;
-    this.end = node.endPosition;
-    node.errors.push(this as any);
-  }
-
-  toString() {
-    return this.message;
   }
 }

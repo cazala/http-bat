@@ -19,7 +19,8 @@ export import Coverage = require('./lib/Coverage');
 export import YAML = require('./lib/YAML');
 import { RAMLCoverage } from './lib/Coverage';
 export import FileSystem = require('./lib/FileSystem');
-
+import ATLTest from './lib/ATLTest';
+import ATLRunner from './lib/Runners/ATLRunner';
 
 export interface IBatOptions {
   baseUri?: string;
@@ -101,7 +102,7 @@ export class Bat {
     }
   }
 
-  run(app?): Promise<{ success: boolean; }[]> {
+  createRunner(app?): ATLRunner {
     let prom = ATLHelpers.flatPromise();
 
     if (this.errors.length) {
@@ -109,73 +110,56 @@ export class Bat {
       throw new Error('Can not run with errors. Found ' + this.errors.length + '\n' + errorStr);
     }
 
-    try {
-      if (this.atl.options.selfSignedCert) {
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-      }
 
-      if (this.options.baseUri == 'default')
-        delete this.options.baseUri;
-
-      if (!app || app === "default" || app === '') {
-        app = this.options.baseUri || this.atl.options.baseUri;
-      }
-
-      if (!app) {
-        throw new Error("baseUri not specified");
-      }
-
-      if (typeof app === 'string' && app.substr(-1) === '/') {
-        app = app.substr(0, app.length - 1);
-      }
-
-      this.atl.agent = request.agent(app);
-
-      // Run tests
-
-      let tests = this.allTests();
-      let allDone = [];
-
-      tests.forEach(test => {
-        let testResult = test.promise;
-
-        allDone.push(
-          testResult
-            .then(result => {
-              return Promise.resolve({
-                success: true
-              });
-            })
-            .catch(result => {
-              return Promise.resolve({
-                success: false
-              });
-            })
-        );
-
-        if (this.RAMLCoverage && !test.skip) {
-          testResult.then(() => {
-            this.RAMLCoverage.registerTestResult(test, {
-              req: test.requester.superAgentRequest,
-              res: test.requester.superAgentResponse,
-              test: test,
-              url: test.requester.url
-            });
-          });
-        }
-      });
-
-      Promise.all(allDone).then(() => prom.resolver());
-
-      Object.keys(this.atl.suites).forEach(x => this.atl.suites[x].run());
-    } catch (e) {
-      prom.rejecter(e);
+    if (this.atl.options.selfSignedCert) {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     }
 
-    return prom.promise;
+    if (this.options.baseUri == 'default')
+      delete this.options.baseUri;
+
+    if (!app || app === "default" || app === '') {
+      app = this.options.baseUri || this.atl.options.baseUri;
+    }
+
+    if (!app) {
+      throw new Error("baseUri not specified");
+    }
+
+    if (typeof app === 'string' && app.substr(-1) === '/') {
+      app = app.substr(0, app.length - 1);
+    }
+
+    // Run tests
+
+    let runner = new ATLRunner(this.atl, request.agent(app));
+
+    let tests = runner.allTestRunners();
+
+    tests.forEach(test => {
+      if (this.RAMLCoverage && test.request) {
+        test.request.then(() => {
+          this.RAMLCoverage.registerTestResult({
+            req: test.request.superAgentRequest,
+            res: test.request.value,
+            test: test.suite.test,
+            url: test.request.url,
+            urlObject: test.request.urlObject
+          });
+        });
+      }
+    });
+
+    return runner;
   }
 
-  allTests(): ATLHelpers.ATLTest[] {
+  run(app?): ATLRunner {
+    let runner = this.createRunner(app);
+    runner.run();
+    return runner;
+  }
+
+  allTests(): ATLTest[] {
     return this.atl.allTests();
   }
 }

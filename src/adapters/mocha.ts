@@ -1,29 +1,40 @@
 // NODE
 import { inspect } from 'util';
 
+
+// NPM
+import _ = require('lodash');
+
 // LOCAL
-import { ATLTest, ATLSuite, flatPromise } from '../lib/ATLHelpers';
+import { flatPromise } from '../lib/ATLHelpers';
 import { ATL } from '../lib/ATL';
 import { Bat } from '../index';
 import { CoverageResource, CoverageAssertion } from '../lib/Coverage';
-import _ = require('lodash');
+
+
+import ATLTest from '../lib/ATLTest';
+import ATLSuite from '../lib/ATLSuite';
+
+import SuiteRunner from '../lib/Runners/SuiteRunner';
+import ATLRunner from '../lib/Runners/ATLRunner';
+
 
 declare var describe, it;
 
 const stringRepresentation = (x) => inspect(x, false, 30, true);
 
-function runSuite(suite: ATLSuite): Promise<boolean> {
-  let execFn = suite.skip ? describe.skip : describe;
+function runSuite(suite: SuiteRunner): Promise<boolean> {
+  let execFn = suite.suite.skip ? describe.skip : describe;
 
-  if (suite.test) {
-    let test = suite.test;
+  if (suite.request) {
+    let test = suite.suite.test;
 
-    execFn(test.description || (suite.name), function () {
-      it(test.method.toUpperCase() + ' ' + test.uri, function (done) {
+    execFn((test.description || (suite.suite.name)) + ' ' + suite.id, function () {
+      this.bail(false);
+      it(test.method.toUpperCase() + ' ' + test.uri + ' ' + suite.request.id, function (done) {
         this.timeout(test.timeout + 100);
-        test
-          .requester
-          .promise
+        suite
+          .request
           .then(response => {
             done();
           })
@@ -32,16 +43,12 @@ function runSuite(suite: ATLSuite): Promise<boolean> {
           });
       });
 
-
-      test.assertions.forEach(x => {
-        (x.skip ? it.skip : it)(x.name, function (done) {
+      suite.assertionRunners.forEach(x => {
+        (test.suite.skip ? it.skip : it)(x.name + ' ' + x.id, function (done) {
           this.timeout(test.timeout + 100);
-          x.promise
+          x
             .then(err => {
-              if (err) {
-                done(err);
-              } else
-                done();
+              done();
             })
             .catch(err => {
               done(err);
@@ -51,8 +58,7 @@ function runSuite(suite: ATLSuite): Promise<boolean> {
 
       it('Result', function (done) {
         this.timeout(test.timeout + 100);
-        test
-          .promise
+        suite
           .then(response => {
             done();
           })
@@ -70,7 +76,7 @@ function runSuite(suite: ATLSuite): Promise<boolean> {
       });
     });
 
-    return test.promise
+    return suite
       .then(x => true)
       .catch(x => false);
   }
@@ -79,12 +85,12 @@ function runSuite(suite: ATLSuite): Promise<boolean> {
 
   let flatProm = flatPromise();
 
-  if (suite.suites && Object.keys(suite.suites).length) {
-    execFn(suite.name, function () {
+  if (suite.suiteRunners && suite.suiteRunners.length) {
+    execFn(suite.suite.name + ' ' + suite.id, function () {
       let results = [];
 
-      for (let k in suite.suites) {
-        results.push(runSuite(suite.suites[k]));
+      for (let k in suite.suiteRunners) {
+        results.push(runSuite(suite.suiteRunners[k]));
       }
 
       Promise.all(
@@ -104,39 +110,26 @@ function runSuite(suite: ATLSuite): Promise<boolean> {
 
 
 
-export function registerMochaSuites(bat: Bat) {
-  let allSuites = [];
-  describe(bat.file, function () {
-    for (let suiteName in bat.atl.suites) {
-      allSuites.push(runSuite(bat.atl.suites[suiteName]));
-    }
+export function registerMochaSuites(runner: ATLRunner, bat: Bat) {
+  describe(runner.atl.options.file, function () {
+    runner.suiteRunners.map(runSuite);
 
     if (bat.RAMLCoverage && bat.atl.raml) {
-      describe("RAML Coverage", () => {
+      describe("RAML Coverage", function () {
         if (bat.atl.options.raml.coverage) {
-
           bat.RAMLCoverage.coverageElements.forEach(x => {
             injectMochaCoverageTests(x.resourceAssertion);
           });
         }
 
-        Promise.all(allSuites).then(r => {
+        runner.thenOrCatch().then(r => {
           bat.RAMLCoverage.coverageElements.forEach(item => item.run());
           Promise.all(
             bat
               .RAMLCoverage
               .coverageElements
               .map(x => x.getCoverage())
-          ); /*.then(x => {
-            let total = x.reduce((prev, actual) => {
-              prev.errored += actual.errored;
-              prev.total += actual.total;
-              prev.notCovered += actual.notCovered;
-              return prev;
-            }, { total: 0, errored: 0, notCovered: 0 });
-            console.log('RAMLCoverage: ' + bat.file, inspect(total, false, 2, true));
-          });
-                */
+          );
         });
       });
     }

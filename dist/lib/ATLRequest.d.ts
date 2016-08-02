@@ -1,16 +1,14 @@
 import url = require('url');
 import { Response, SuperAgentRequest } from 'superagent';
-import { ATLTest } from './ATLHelpers';
-export declare class ATLRequest {
+import ATLTest from './ATLTest';
+import Runnable from './Runnable';
+import ATLRunner from './Runners/ATLRunner';
+export declare class ATLRequest extends Runnable<Response> {
     test: ATLTest;
+    ATLRunner: ATLRunner;
     urlObject: url.Url;
     url: string;
     superAgentRequest: SuperAgentRequest;
-    superAgentResponse: Response;
-    private flatPromise;
-    promise: Promise<Response>;
-    constructor(test: ATLTest);
-    run(): Promise<Response>;
-    private _run();
-    cancel(): void;
+    constructor(test: ATLTest, ATLRunner: ATLRunner);
 }
+export default ATLRequest;

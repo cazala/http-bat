@@ -4,6 +4,8 @@ export import Coverage = require('./lib/Coverage');
 export import YAML = require('./lib/YAML');
 import { RAMLCoverage } from './lib/Coverage';
 export import FileSystem = require('./lib/FileSystem');
+import ATLTest from './lib/ATLTest';
+import ATLRunner from './lib/Runners/ATLRunner';
 export interface IBatOptions {
     baseUri?: string;
     variables?: ATLHelpers.IDictionary<any>;
@@ -23,9 +25,8 @@ export declare class Bat {
     private updateState();
     load(file: string): void;
     raw(content: string): void;
-    run(app?: any): Promise<{
-        success: boolean;
-    }[]>;
-    allTests(): ATLHelpers.ATLTest[];
+    createRunner(app?: any): ATLRunner;
+    run(app?: any): ATLRunner;
+    allTests(): ATLTest[];
 }
 export default Bat;

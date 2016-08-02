@@ -3,6 +3,7 @@ export import Parser = require('yaml-ast-parser');
 export import ASTParser = require('yaml-ast-parser');
 import { IDictionary } from './ATLHelpers';
 import { IncludedFile } from './FileSystem';
+import { NodeError } from './Exceptions';
 export declare class KeyValueObject<T> {
     key: string;
     value: T;
@@ -27,11 +28,4 @@ export declare namespace YAMLAstHelpers {
     function getMap(node: ASTParser.YAMLNode): IDictionary<ASTParser.YAMLNode>;
     function iterpretMap(node: ASTParser.YAMLNode, interprete: any, failOnUnknown?: boolean, ...args: any[]): void;
     function ensureInstanceOf(node: ASTParser.YAMLNode, ...types: Function[]): boolean;
-}
-export declare class NodeError extends Error {
-    node: ASTParser.YAMLNode;
-    start: number;
-    end: number;
-    constructor(message: string, node: ASTParser.YAMLNode);
-    toString(): string;
 }

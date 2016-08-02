@@ -16,10 +16,13 @@ import superAgent = require('superagent');
 import { ATL } from './ATL';
 import ATLHelpers = require('./ATLHelpers');
 import { generateString as coverageToString } from '../lib/RAMLCoverageReporter';
+import ATLTest from './ATLTest';
+import { NoMatchingResults, NotImplementedError, CoverageError, OptionalError } from './Exceptions';
 
 export interface ITestResult {
-  test: ATLHelpers.ATLTest;
+  test: ATLTest;
   response: request.Response;
+  urlObject: url.Url;
 }
 
 export interface ICovData {
@@ -169,7 +172,9 @@ export class CoverageResource {
       // https://github.com/raml-org/raml-js-parser-2/issues/370
     }
 
-    this.matches = pathMatch(this.relativeUrl, this.uriParameters);
+    let matcher = pathMatch(this.relativeUrl, this.uriParameters);
+
+    this.matches = matcher;
     this.generateAssertions();
   }
 
@@ -194,49 +199,6 @@ export class CoverageResource {
 
       let responses: RAML.api08.Response[] = [];
       let flatQueryParameters: ATLHelpers.IDictionary<any> = {};
-
-      // if (this.bat.ast.options.raml.traits) {
-      let traits = method.is();
-      for (let traitIndex = 0; traitIndex < traits.length; traitIndex++) {
-        let trait = traits[traitIndex];
-
-        let traitJSON = trait.trait().toJSON();
-        let traitName = trait.name();
-
-        if (traitJSON[traitName].queryParameters) {
-          for (let name in traitJSON[traitName].queryParameters) {
-            let param = traitJSON[traitName].queryParameters[name];
-            flatQueryParameters[param.name] = flatQueryParameters[param.name] || {};
-            _.merge(flatQueryParameters[param.name], param);
-          }
-
-        }
-
-        responses = responses.concat(trait.trait().responses() as any);
-      }
-      // }
-
-      // if (this.bat.ast.options.raml.resourceTypes) {
-      if (type) {
-        let typeMethods = type.resourceType().methods() as RAML.api08.Method[];
-
-        typeMethods = typeMethods.filter(x => x.method().toUpperCase() == method.method().toUpperCase());
-        typeMethods.forEach(m => {
-          let typeMethodJson = m.toJSON()[m.method().toLowerCase()];
-
-          if (typeMethodJson.queryParameters) {
-            for (let name in typeMethodJson.queryParameters) {
-              let param = typeMethodJson.queryParameters[name];
-              flatQueryParameters[param.name] = flatQueryParameters[param.name] || {};
-              _.merge(flatQueryParameters[param.name], param);
-            }
-          }
-
-          responses = responses.concat(m.responses() as any);
-        });
-      }
-      // }
-
 
       responses = responses.concat(method.responses() as any);
 
@@ -291,9 +253,9 @@ export class CoverageResource {
                   x =>
                     x.test.method.toUpperCase() == methodName
                     &&
-                    (qp.name in x.test.requester.urlObject.query)
+                    (qp.name in x.urlObject.query)
                 ))
-                  throw new (qp.required ? Error : NotImplementedError)("Query parameter not covered. Found permutations: " + util.inspect(results.map(x => x.test.requester.urlObject.query)));
+                  throw new (qp.required ? Error : NotImplementedError)("Query parameter not covered. Found permutations: " + util.inspect(results.map(x => x.urlObject.query)));
               }));
 
             methodAssetions.innerAssertions.push(
@@ -302,9 +264,9 @@ export class CoverageResource {
                   x =>
                     x.test.method.toUpperCase() == methodName
                     &&
-                    !(qp.name in x.test.requester.urlObject.query)
+                    !(qp.name in x.urlObject.query)
                 ))
-                  throw new NotImplementedError("Missing queryParameter not covered. Found permutations: " + util.inspect(results.map(x => x.test.requester.urlObject.query)));
+                  throw new NotImplementedError("Missing queryParameter not covered. Found permutations: " + util.inspect(results.map(x => x.urlObject.query)));
               }));
           });
       }
@@ -445,10 +407,11 @@ export class CoverageResource {
   }
 
 
-  resolve(test: ATLHelpers.ATLTest, response: request.Response) {
+  resolve(test: ATLTest, response: request.Response, urlObject: url.Url) {
     this.results.push({
       test,
-      response
+      response,
+      urlObject
     });
   }
 
@@ -577,17 +540,18 @@ export class RAMLCoverage {
     }
   }
 
-  registerTestResult(test: ATLHelpers.ATLTest, ctx: {
+  registerTestResult(ctx: {
     req: superAgent.SuperAgentRequest;
     res: superAgent.Response;
-    test: ATLHelpers.ATLTest;
+    test: ATLTest;
     url: string;
+    urlObject: url.Url;
   }) {
     this.coverageElements.forEach(coverageElement => {
       let matchPart = url.parse(ctx.url);
 
       if (coverageElement.matches(matchPart.pathname)) {
-        coverageElement.resolve(ctx.test, ctx.res);
+        coverageElement.resolve(ctx.test, ctx.res, ctx.urlObject);
       }
     });
   }
@@ -628,32 +592,5 @@ export class RAMLCoverage {
 
       console.info("Writing coverage information. OK!");
     }
-  }
-}
-
-
-export class CoverageError extends Error {
-
-}
-
-export class NotImplementedError extends CoverageError {
-  constructor(message: string) {
-    super(message);
-    this.message = message;
-    this.name = "Method not implemented";
-  }
-}
-
-export class OptionalError extends CoverageError {
-  constructor(message: string) {
-    super(message);
-    this.message = message;
-    this.name = "Optional Error";
-  }
-}
-
-export class NoMatchingResults extends NotImplementedError {
-  constructor() {
-    super("No matching results");
   }
 }

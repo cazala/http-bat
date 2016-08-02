@@ -6,9 +6,13 @@ import RAML = require('raml-1-parser');
 const jsonschema = require('jsonschema');
 import { SuperAgent, SuperAgentRequest, agent } from 'superagent';
 
-import { ASTParser, YAMLAstHelpers, NodeError, walkFindingErrors, printError } from './YAML';
-
+import { ASTParser, YAMLAstHelpers, walkFindingErrors, printError } from './YAML';
+import { NodeError } from './Exceptions';
 import { IFSResolver, FSResolver } from './FileSystem';
+
+import ATLTest from './ATLTest';
+import ATLSuite from './ATLSuite';
+
 
 import path = require('path');
 
@@ -123,7 +127,7 @@ export class ATL {
 
         let tests = YAMLAstHelpers.getMap(node);
 
-        let suite: ATLHelpers.ATLSuite = null;
+        let suite: ATLSuite = null;
 
         for (let sequenceName in tests) {
           if (YAMLAstHelpers.isMap(tests[sequenceName])) {
@@ -193,21 +197,19 @@ export class ATL {
       this.options.FSResolver = new FSResolver(this.options.path);
   }
 
-  agent: SuperAgent<SuperAgentRequest>;
-
   raml: RAML.api08.Api | RAML.api10.Api;
 
-  suites: ATLHelpers.IDictionary<ATLHelpers.ATLSuite> = {};
+  suites: ATLHelpers.IDictionary<ATLSuite> = {};
 
   schemas: ATLHelpers.IDictionary<any> = {};
 
   errors = [];
 
 
-  allTests(): ATLHelpers.ATLTest[] {
+  allTests(): ATLTest[] {
     let tests = [];
 
-    const walk = (suite: ATLHelpers.ATLSuite) => {
+    const walk = (suite: ATLSuite) => {
       if (suite.test)
         tests.push(suite.test);
 
@@ -241,33 +243,6 @@ export class ATL {
     }
 
     this.allTests().forEach(x => this.replaceSchema(x));
-
-    let requiredSuites: ATLHelpers.ATLSuite[] = [];
-
-    let lastSyncSuite: ATLHelpers.ATLSuite = null;
-
-    for (let suiteName in this.suites) {
-      let suite = this.suites[suiteName];
-
-      if (suite.async) {
-        if (lastSyncSuite) {
-          suite.dependsOn.push(lastSyncSuite);
-        }
-
-        requiredSuites.push(suite);
-      } else {
-        requiredSuites.forEach(x =>
-          suite.dependsOn.push(x)
-        );
-
-        if (lastSyncSuite)
-          suite.dependsOn.push(lastSyncSuite);
-
-        requiredSuites.length = 0;
-
-        lastSyncSuite = suite;
-      }
-    }
 
     walkFindingErrors(astRoot, this.errors);
 
@@ -314,7 +289,7 @@ export class ATL {
   }
 
   // Matches the schemas of the tests against the schemas of the ATL document
-  private replaceSchema(test: ATLHelpers.ATLTest) {
+  private replaceSchema(test: ATLTest) {
     if (test && test.response.body && test.response.body.schema) {
       if (typeof test.response.body.schema == "string") {
         if (test.response.body.schema in this.schemas) {
@@ -334,3 +309,5 @@ export class ATL {
     this.schemas[schemaName] = schema;
   }
 }
+
+export default ATL;

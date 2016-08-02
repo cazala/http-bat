@@ -1,36 +1,36 @@
 #!/usr/bin/env node
 "use strict";
-const path = require('path');
+var path = require('path');
 // NPM
-const glob = require('glob');
-const Mocha = require('mocha');
+var glob = require('glob');
+var Mocha = require('mocha');
 // LOCALS
-const index_1 = require('../index');
-const YAML = require('../lib/YAML');
-const Coverage_1 = require('../lib/Coverage');
-const httpBatMochaAdapter = require('../adapters/mocha');
-const RAMLCoverageReporter_1 = require('../lib/RAMLCoverageReporter');
-const pkg = require('../../package.json');
-let opts = require('yargs')
+var index_1 = require('../index');
+var YAML = require('../lib/YAML');
+var Coverage_1 = require('../lib/Coverage');
+var httpBatMochaAdapter = require('../adapters/mocha');
+var RAMLCoverageReporter_1 = require('../lib/RAMLCoverageReporter');
+var pkg = require('../../package.json');
+var opts = require('yargs')
     .usage('http-bat test.yml [--uri uri]')
     .version('version', pkg.version)
     .alias('u', 'uri')
     .describe('u', 'target Uri')
     .parse(process.argv);
-let cwd = process.cwd();
-let files = opts._[2];
-let uri = opts.uri || "default";
+var cwd = process.cwd();
+var files = opts._[2];
+var uri = opts.uri || "default";
 if (uri) {
     console.info("http-bat: Default endpoint setted to " + uri);
 }
 if (!files) {
     files = '**/*.yml';
 }
-let mocha = new Mocha({
+var mocha = new Mocha({
     bail: false,
     useColors: true
 });
-let foundFiles = glob.sync(files, {
+var foundFiles = glob.sync(files, {
     nodir: true,
     cwd: cwd,
     realpath: true,
@@ -40,14 +40,14 @@ if (!foundFiles.length) {
     console.error("http-bat: No file matching " + JSON.stringify(files));
     process.exit(1);
 }
-let instances = [];
-let sharedCoverageData = new Coverage_1.CoverageData;
+var instances = [];
+var sharedCoverageData = new Coverage_1.CoverageData;
 foundFiles.forEach(function (file) {
     file = path.resolve(file);
     mocha.suite.emit('pre-require', global, file, mocha);
     mocha.suite.emit('require', (function (file, uri) {
         describe('Load ' + file, function () {
-            let instance;
+            var instance;
             this.bail(true);
             instance = new index_1.Bat({
                 baseUri: uri
@@ -59,32 +59,32 @@ foundFiles.forEach(function (file) {
                     instance.RAMLCoverage.coverageData = sharedCoverageData;
                 }
                 if (instance.errors && instance.errors.length) {
-                    instance.errors.forEach(element => {
+                    instance.errors.forEach(function (element) {
                         YAML.printError(element);
                     });
                     return done(new Error("Error while loading " + file));
                 }
-                httpBatMochaAdapter.registerMochaSuites(instance);
-                instance.run();
+                var runner = instance.run();
+                httpBatMochaAdapter.registerMochaSuites(runner, instance);
                 done();
             });
         });
     })(file, uri), file, mocha);
     mocha.suite.emit('post-require', global, file, mocha);
 });
-let runner = mocha.run();
-let failureCount = 0;
-let passCount = 0;
+var runner = mocha.run();
+var failureCount = 0;
+var passCount = 0;
 runner.on('pass', function () {
     ++passCount;
 });
 runner.on('fail', function () {
     ++failureCount;
 });
-let COVReport = RAMLCoverageReporter_1.HTMLCov(runner);
+var COVReport = RAMLCoverageReporter_1.HTMLCov(runner);
 runner.on('end', function (failures) {
-    let coverageFile = path.resolve(cwd, 'coverage/lcov.info');
-    let keys = Object.keys(Coverage_1.GlobalCoverageDataCollector.data);
+    var coverageFile = path.resolve(cwd, 'coverage/lcov.info');
+    var keys = Object.keys(Coverage_1.GlobalCoverageDataCollector.data);
     if (keys.length) {
         try {
             COVReport.write(path.resolve(cwd, 'coverage/raml.html'));

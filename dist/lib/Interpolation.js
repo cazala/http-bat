@@ -1,11 +1,11 @@
 "use strict";
-const reInterpolation = /(\\{0,1})\{([^\}\{]+)\}/g;
-const _ = require("lodash");
+var reInterpolation = /(\\{0,1})\{([^\}\{]+)\}/g;
+var _ = require("lodash");
 function interpolateString(input, store) {
-    return input.replace(reInterpolation, (fulltext, startChar, match) => {
+    return input.replace(reInterpolation, function (fulltext, startChar, match) {
         if (startChar === "\\")
             return fulltext;
-        let value = _.get(store, match);
+        var value = _.get(store, match);
         if (typeof value === "undefined") {
             return fulltext;
         }
@@ -27,8 +27,8 @@ function hasPendingInterpolations(input) {
 }
 exports.hasPendingInterpolations = hasPendingInterpolations;
 function ensureAllInterpolations(input) {
-    let list = [];
-    input.replace(reInterpolation, (fulltext, scaped) => {
+    var list = [];
+    input.replace(reInterpolation, function (fulltext, scaped) {
         if (scaped == "\\")
             return;
         list.push(fulltext);

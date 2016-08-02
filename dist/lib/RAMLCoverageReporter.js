@@ -1,6 +1,6 @@
 "use strict";
-const fs_1 = require('fs');
-const path_1 = require('path');
+var fs_1 = require('fs');
+var path_1 = require('path');
 /**
  * Initialize a new LCOV reporter.
  * File format of LCOV can be found here: http://ltp.sourceforge.net/coverage/lcov/geninfo.1.php
@@ -10,7 +10,7 @@ const path_1 = require('path');
  * @api public
  */
 function generateString(filename, data) {
-    let sout = [];
+    var sout = [];
     sout.push('SF:' + filename + '\n');
     data.source.forEach(function (line, num) {
         // increase the line number, as JS arrays are zero-based
@@ -26,7 +26,7 @@ exports.generateString = generateString;
 /**
  * Module dependencies.
  */
-const JSONCov = require('mocha/lib/reporters/json-cov');
+var JSONCov = require('mocha/lib/reporters/json-cov');
 /**
  * Initialize a new `JsCoverage` reporter.
  *
@@ -34,14 +34,14 @@ const JSONCov = require('mocha/lib/reporters/json-cov');
  * @param {Runner} runner
  */
 function HTMLCov(runner) {
-    let jade = require('pug');
-    let file = path_1.resolve(__dirname, '../../coverage-report/coverage.pug');
-    let str = fs_1.readFileSync(file, 'utf8');
-    let fn = jade.compile(str, { filename: file });
-    let self = new JSONCov(runner, false);
+    var jade = require('pug');
+    var file = path_1.resolve(__dirname, '../../coverage-report/coverage.pug');
+    var str = fs_1.readFileSync(file, 'utf8');
+    var fn = jade.compile(str, { filename: file });
+    var self = new JSONCov(runner, false);
     return {
-        write(destFile) {
-            let content = fn({
+        write: function (destFile) {
+            var content = fn({
                 cov: self.cov,
                 coverageClass: coverageClass
             });

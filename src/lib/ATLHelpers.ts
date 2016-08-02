@@ -11,206 +11,17 @@ export import pointerLib = require('./Pointer');
 import { ATLError, ATLResponseAssertion, CommonAssertions } from './ATLAssertion';
 import { ATLRequest } from './ATLRequest';
 import { IncludedFile, IFSResolver, DefaultFileResolver } from './FileSystem';
-import { ASTParser, YAMLAstHelpers, NodeError, KeyValueObject } from './YAML';
+import { ASTParser, YAMLAstHelpers, KeyValueObject } from './YAML';
 
+import { NodeError } from './Exceptions';
+
+import ATLTest from './ATLTest';
+import ATLSuite from './ATLSuite';
 
 export interface IDictionary<T> {
   [key: string]: T;
 }
 
-/// ---
-
-export class CanceledError extends Error {
-  inspect() {
-    return 'CANCELED';
-  }
-  constructor() {
-    super('CANCELED');
-  }
-}
-
-/// ---
-
-export class ATLSuite {
-  constructor(public name: string) {
-
-  }
-
-  dependsOn: ATLSuite[] = [];
-
-  suites: ATLSuite[] = null;
-  async: boolean = false;
-  descriptor: any = null;
-  test: ATLTest = null;
-  skip: boolean = false;
-  atl: ATL;
-
-  lastSuite: ATLSuite;
-  firstSuite: ATLSuite;
-
-  private flatPromise = flatPromise();
-
-  promise = this.flatPromise.promise;
-
-  run() {
-    let mutex: Promise<any> = this.dependsOn.length ? Promise.all(this.dependsOn.map(x => x.promise)) : Promise.resolve();
-
-    mutex.then(() => {
-
-      if (this.test) {
-        let innerRun = this.test.run();
-        innerRun.then(() => this.flatPromise.resolver());
-        innerRun.catch(err => this.reject(err));
-      } else if (this.suites) {
-        if (!this.suites.length) {
-          this.flatPromise.resolver();
-        } else {
-          let innerMutex = Promise.all(this.suites.map(x => x.run()));
-          innerMutex.then(() => this.flatPromise.resolver());
-          innerMutex.catch(err => {
-            this.reject(err);
-          });
-        }
-      } else this.flatPromise.rejecter(new Error('Invalid suite. No tests and no sub suites found. ' + this.name));
-
-    });
-
-    mutex.catch(err => {
-      this.reject(err);
-    });
-
-    return this.promise;
-  }
-
-  private reject(error) {
-    if (this.skip && error instanceof Error) {
-      this.flatPromise.resolver();
-    } else {
-      this.flatPromise.rejecter(error);
-    }
-    this.cancel(error);
-  }
-
-  cancel(err: Error) {
-    this.flatPromise.rejecter(err);
-    if (this.test) this.test.cancel(err);
-    if (this.suites && this.suites.length) this.suites.forEach(x => x.cancel(err));
-  }
-}
-
-/// ---
-
-export interface IATLTestRes {
-  status?: number;
-  body?: {
-    lowLevelNode?: ASTParser.YAMLNode;
-    is?: any;
-    matches?: KeyValueObject<any>[];
-    take?: KeyValueObject<pointerLib.Pointer>[];
-    copyTo?: pointerLib.Pointer;
-    schema?: any;
-    print?: boolean;
-  };
-  headers?: IDictionary<string>;
-  print?: boolean;
-  lowLevelNode?: ASTParser.YAMLNode;
-}
-
-export interface IATLTestReq {
-  attach?: KeyValueObject<string>[];
-  form?: KeyValueObject<any>[];
-  json?: any;
-  urlencoded?: KeyValueObject<any>[];
-  queryParameters?: IDictionary<any>;
-  headers?: IDictionary<any>;
-  lowLevelNode?: ASTParser.YAMLNode;
-}
-
-export class ATLTest {
-  suite: ATLSuite;
-
-  description: string;
-  testId: string;
-
-  method: string;
-
-  uri: string;
-  uriParameters: IDictionary<any>;
-  skip: boolean = false;
-
-  timeout = 30000;
-
-  response: IATLTestRes = {};
-  request: IATLTestReq = {};
-
-  result: any;
-
-  lowLevelNode: ASTParser.YAMLNode;
-
-  private flatPromise = flatPromise();
-
-  promise = this.flatPromise.promise;
-
-  requester: ATLRequest = new ATLRequest(this);
-  assertions: ATLResponseAssertion[] = [];
-
-  constructor() {
-    this.requester.promise
-      .catch(x => this.flatPromise.rejecter(x));
-  }
-
-  run(): Promise<void> {
-    if (this.skip) {
-      this.flatPromise.resolver();
-      return this.promise;
-    }
-
-    if (!this.assertions.length) {
-      this.requester.promise
-        .then(x => this.flatPromise.resolver());
-    } else {
-      let assertionResults = Promise.all(this.assertions.map(x => x.promise));
-
-      assertionResults
-        .then(assertionResults => {
-          let errors = assertionResults.filter(x => !!x);
-
-          if (errors.length) {
-            this.flatPromise.rejecter(errors);
-          } else {
-            this.flatPromise.resolver();
-          }
-        });
-
-      assertionResults
-        .catch(errors => {
-          this.flatPromise.rejecter(errors);
-        });
-    }
-
-    this.requester.run();
-
-    return this.promise;
-  }
-
-  cancel(err: Error) {
-    try {
-      this.flatPromise.rejecter(err);
-    } catch (e) {
-
-    }
-
-    this.assertions.forEach(x => {
-      try {
-        x.cancel();
-      } catch (e) { }
-    });
-
-    try {
-      this.requester.cancel();
-    } catch (e) { }
-  }
-}
 
 /// ---
 
@@ -230,6 +41,11 @@ const interpreteSuite = {
       suite.async = !!async;
     }
   },
+  soft(suite: ATLSuite, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Boolean)) {
+      suite.soft = !!YAMLAstHelpers.readScalar(node);
+    }
+  },
   UNKNOWN(suite: ATLSuite, node: YAMLNode, name: string) {
 
     let method = parseMethodHeader(name);
@@ -243,30 +59,18 @@ const interpreteSuite = {
           throw new NodeError('Duplicated test name: ' + name, node);
         }
 
-        let testSuite = new ATLSuite(name);
+        let wrapperSuite = new ATLSuite(name);
 
+        wrapperSuite.atl = suite.atl;
 
+        wrapperSuite.descriptor = YAMLAstHelpers.toObject(node);
 
-        testSuite.atl = suite.atl;
+        wrapperSuite.test = parseTest(node, suite, wrapperSuite);
 
-        testSuite.descriptor = YAMLAstHelpers.toObject(node);
+        wrapperSuite.test.method = method.method;
+        wrapperSuite.test.uri = method.url;
 
-        testSuite.test = parseTest(node, suite);
-
-        testSuite.skip = testSuite.test.skip;
-
-        testSuite.test.method = method.method;
-        testSuite.test.uri = method.url;
-
-        if (suite.lastSuite)
-          testSuite.dependsOn.push(suite.lastSuite);
-
-        suite.lastSuite = testSuite;
-
-        if (!suite.firstSuite)
-          suite.firstSuite = testSuite;
-
-        suite.suites.push(testSuite);
+        suite.suites.push(wrapperSuite);
       }
     } else {
       throw new NodeError('Invalid node: ' + name, node);
@@ -308,6 +112,8 @@ const interpreteTest = {
       let id = YAMLAstHelpers.readScalar(node);
 
       test.testId = id.toString();
+
+      // todo, check for duplicated ids
     }
   },
   timeout(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
@@ -363,13 +169,12 @@ const interpreteTest = {
   },
   skip(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
     if (YAMLAstHelpers.ensureInstanceOf(node, Boolean)) {
-      let id = YAMLAstHelpers.readScalar(node);
-
-      test.skip = !!id;
-
-      if (test.skip) {
-        test.requester.cancel();
-      }
+      test.wrapperSuite.skip = !!YAMLAstHelpers.readScalar(node);
+    }
+  },
+  soft(suite: ATLSuite, test: ATLTest, node: YAMLNode) {
+    if (YAMLAstHelpers.ensureInstanceOf(node, Boolean)) {
+      test.wrapperSuite.soft = !!YAMLAstHelpers.readScalar(node);
     }
   }
 };
@@ -390,7 +195,6 @@ export function parseSuites(sequenceName: string, node: YAMLNode, instance: ATL)
     const recursiveSkip = (suite: ATLSuite) => {
       suite.skip = true;
       suite.suites && suite.suites.forEach(recursiveSkip);
-      suite.test && (suite.test.skip = true);
     };
 
     recursiveSkip(suite);
@@ -400,8 +204,9 @@ export function parseSuites(sequenceName: string, node: YAMLNode, instance: ATL)
 }
 
 
-export function parseTest(node: YAMLNode, suite: ATLSuite): ATLTest {
+export function parseTest(node: YAMLNode, suite: ATLSuite, wrapperSuite: ATLSuite): ATLTest {
   let test = new ATLTest;
+  test.wrapperSuite = wrapperSuite;
   test.suite = suite;
 
   test.lowLevelNode = node;
@@ -413,8 +218,6 @@ export function parseTest(node: YAMLNode, suite: ATLSuite): ATLTest {
   if (!test.response || !test.response.status) {
     test.response.status = 200;
   }
-
-  generateTestAssertions(test);
 
   return test;
 }
@@ -792,67 +595,4 @@ export function error(msg, ctx) {
     };
   }
   return err;
-}
-
-
-if (!(error('test', {}) instanceof Error)) process.exit(1);
-if (!(errorDiff('test', 1, 2, {}) instanceof Error)) process.exit(1);
-
-
-function generateTestAssertions(test: ATLTest) {
-  if (test.suite.skip) return;
-
-  if (test.response) {
-    if (test.response.status) {
-      test.assertions.push(
-        new CommonAssertions.StatusCodeAssertion(test, test.response.status)
-      );
-    }
-
-    if (test.response.body) {
-      if ('is' in test.response.body) {
-        test.assertions.push(
-          new CommonAssertions.BodyEqualsAssertion(test, test.response.body.is)
-        );
-      }
-
-      if (test.response.body.schema) {
-        test.assertions.push(
-          new CommonAssertions.ValidateSchemaOperation(test, test.response.body.schema)
-        );
-      }
-
-      if (test.response.body.matches) {
-        test.response.body.matches.forEach(kvo => {
-          test.assertions.push(
-            new CommonAssertions.BodyMatchesAssertion(test, kvo.key, kvo.value)
-          );
-        });
-      }
-
-      if (test.response.headers) {
-        for (let h in test.response.headers) {
-          test.assertions.push(
-            new CommonAssertions.HeaderMatchesAssertion(test, h, test.response.headers[h])
-          );
-        }
-      }
-
-      if (test.response.body.take) {
-        let take = test.response.body.take;
-
-        take.forEach(function (takenElement) {
-          test.assertions.push(
-            new CommonAssertions.CopyBodyValueOperation(test, takenElement.key, takenElement.value)
-          );
-        });
-      }
-
-      if (test.response.body.copyTo && test.response.body.copyTo instanceof pointerLib.Pointer) {
-        test.assertions.push(
-          new CommonAssertions.CopyBodyValueOperation(test, '*', test.response.body.copyTo)
-        );
-      }
-    }
-  }
 }

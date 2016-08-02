@@ -20,8 +20,10 @@ foundFiles.forEach(file => {
 
     instance.load(file);
 
-    registerMochaSuites(instance);
+    let runner = instance.run();
 
-    instance.run();
+    registerMochaSuites(runner, instance);
+
+
   });
 });

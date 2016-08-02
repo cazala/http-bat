@@ -93,9 +93,10 @@ foundFiles.forEach(function (file) {
           return done(new Error("Error while loading " + file));
         }
 
-        httpBatMochaAdapter.registerMochaSuites(instance);
 
-        instance.run();
+        let runner = instance.run();
+
+        httpBatMochaAdapter.registerMochaSuites(runner, instance);
 
         done();
       });

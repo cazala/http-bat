@@ -1,24 +1,25 @@
 "use strict";
 // NPM
-const Type = require('yaml-ast-parser/dist/type');
-const _ = require('lodash');
-class Pointer {
-    constructor(path) {
+var Type = require('yaml-ast-parser/dist/type');
+var _ = require('lodash');
+var Pointer = (function () {
+    function Pointer(path) {
         this.path = path;
     }
-    set(object, value) {
+    Pointer.prototype.set = function (object, value) {
         _.set(object, this.path, value);
-    }
-    get(object) {
+    };
+    Pointer.prototype.get = function (object) {
         return _.get(object, this.path);
-    }
-    inspect() {
+    };
+    Pointer.prototype.inspect = function () {
         return "Pointer [" + this.path + "]";
-    }
-    toString() {
+    };
+    Pointer.prototype.toString = function () {
         return "Pointer [" + this.path + "]";
-    }
-}
+    };
+    return Pointer;
+}());
 exports.Pointer = Pointer;
 // ---
 exports.type = new Type('tag:yaml.org,2002:variable', {
@@ -33,4 +34,6 @@ function constructVariable(data) {
 function resolvePointer(data) {
     return (typeof data.value === 'string');
 }
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = Pointer;
 //# sourceMappingURL=Pointer.js.map
