@@ -10,7 +10,7 @@ Describe your platform independient API tests using [ATL (Api Testing Language)]
 
 Install the tool executing `npm install -g http-bat`
 
-### Using command line, usefull for CI
+### Using command line, useful for CI
 
 Run your tests on `api` folder:
 ```
